@@ -6,6 +6,7 @@ import { User } from "../models/userSchema.js";
 import { sendVerificationCode } from "../utils/verifyEmail/email.js";
 import { sentRegisteredEmail } from "../utils/registeredUser/register.js";
 import { sendTnpStatusEmailApproved, sendTnpStatusEmailDeclined } from "../utils/sendTnpStatusEmail.js";
+import { emitProfileUpdate } from "../socket.js";
 
 export const registerTPO = catchAsyncErrors(async (req, res, next) => {
     const { firstname, lastname, email, phone, password } = req.body;
@@ -128,14 +129,54 @@ export const handleTNPRequest = catchAsyncErrors(async (req, res, next) => {
   });
 
   export const getTPO = catchAsyncErrors((req, res, next) => {
-    const user = req.user;
-    console.log(user);
-    
+    // `role` is not a path on tpoSchema, so setting it on the Mongoose document
+    // (as isAuthenticatedTPO does) is dropped during JSON serialisation and the
+    // client receives a TPO with no role at all. Spread to a plain object so the
+    // role actually survives the response.
+    const user = req.user ? { ...req.user.toObject(), role: "TPO" } : null;
+
     res.status(200).json({
       success: true,
       user,
     });
   });
+
+// update own TPO profile
+export const updateProfileTPO = catchAsyncErrors(async (req, res, next) => {
+  const tpo = await TPO.findById(req.user._id);
+  if (!tpo) {
+    return next(new ErrorHandler("User not found.", 404));
+  }
+
+  // Whitelisted assignment only — see the note in userController.updateProfile.
+  const { firstname, lastname, phone } = req.body;
+
+  if (firstname !== undefined) tpo.firstname = firstname;
+  if (lastname !== undefined) tpo.lastname = lastname;
+  if (phone !== undefined) tpo.phone = phone;
+
+  try {
+    await tpo.save();
+  } catch (error) {
+    // phone carries a unique index; surface that as something a human can act on.
+    if (error.code === 11000) {
+      return next(
+        new ErrorHandler("That phone number is already registered.", 400)
+      );
+    }
+    throw error;
+  }
+
+  const saved = await TPO.findById(tpo._id);
+  const safeUser = { ...saved.toObject(), role: "TPO" };
+  emitProfileUpdate(tpo._id, safeUser);
+
+  res.status(200).json({
+    success: true,
+    message: "Profile updated successfully.",
+    user: safeUser,
+  });
+});
 
 
   // verification code controller

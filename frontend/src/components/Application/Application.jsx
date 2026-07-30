@@ -1,5 +1,5 @@
 import axios from "axios";
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate, useParams } from "react-router-dom";
 import { Context } from "../../main";
@@ -16,7 +16,27 @@ const Application = () => {
   const [resume, setResume] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // The student's stored resume, so they don't re-upload for every application.
+  const [savedResume, setSavedResume] = useState(null);
+  const [useSaved, setUseSaved] = useState(false);
+
   const navigateTo = useNavigate();
+
+  useEffect(() => {
+    let cancelled = false;
+    axios
+      .get("/api/v1/resume/me", { withCredentials: true })
+      .then((res) => {
+        if (cancelled) return;
+        const file = res.data.resume?.file?.fileId ? res.data.resume.file : null;
+        setSavedResume(file);
+        setUseSaved(Boolean(file)); // preselect when there is one
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Function to handle file input changes
   const handleFileChange = (event) => {
@@ -35,8 +55,18 @@ const Application = () => {
     formData.append("phone", phone);
     formData.append("address", address);
     formData.append("coverLetter", coverLetter);
-    formData.append("resume", resume);
     formData.append("jobId", id);
+
+    if (useSaved && savedResume) {
+      formData.append("useSavedResume", "true");
+    } else {
+      if (!resume) {
+        toast.error("Please choose a resume file.");
+        setLoading(false);
+        return;
+      }
+      formData.append("resume", resume);
+    }
 
     try {
       const { data } = await axios.post(
@@ -105,18 +135,43 @@ const Application = () => {
             value={coverLetter}
             onChange={(e) => setCoverLetter(e.target.value)}
           />
-          <div>
+          <div className="resume_choice">
             <label
               style={{ textAlign: "start", display: "block", fontSize: "20px" }}
             >
-              Select Resume
+              Resume
             </label>
-            <input
-              type="file"
-              accept=".pdf, .jpg, .png"
-              onChange={handleFileChange}
-              style={{ width: "100%" }}
-            />
+
+            {savedResume && (
+              <label className="resume_option">
+                <input
+                  type="radio"
+                  name="resumeSource"
+                  checked={useSaved}
+                  onChange={() => setUseSaved(true)}
+                />
+                Use my saved resume ({savedResume.filename})
+              </label>
+            )}
+
+            <label className="resume_option">
+              <input
+                type="radio"
+                name="resumeSource"
+                checked={!useSaved}
+                onChange={() => setUseSaved(false)}
+              />
+              {savedResume ? "Upload a different file" : "Upload a file"}
+            </label>
+
+            {!useSaved && (
+              <input
+                type="file"
+                accept="application/pdf,image/png,image/jpeg,image/webp"
+                onChange={handleFileChange}
+                style={{ width: "100%" }}
+              />
+            )}
           </div>
           <button type="submit" disabled={loading}>
             {loading ? "Sending..." : "Send Application"}

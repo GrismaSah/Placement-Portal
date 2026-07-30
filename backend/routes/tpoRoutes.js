@@ -1,6 +1,6 @@
 import express from "express";
 import { isAuthenticatedTPO } from "../middlewares/auth.js";
-import { forgotPasswordTPO, generateVerificationCodeTPO, getPendingTNPs, getTPO, handleTNPRequest, loginTPO, logoutTPO, registerTPO, updatePasswordTPO, verifyUserTPO } from "../controllers/tpoController.js";
+import { forgotPasswordTPO, generateVerificationCodeTPO, getPendingTNPs, getTPO, handleTNPRequest, loginTPO, logoutTPO, registerTPO, updatePasswordTPO, updateProfileTPO, verifyUserTPO } from "../controllers/tpoController.js";
 import { authorizeRoles } from "../middlewares/tpoAuth.js";
 
 const router = express.Router();
@@ -26,6 +26,11 @@ router.get(
 );
 router.post("/forgot-password", forgotPasswordTPO);
 router.post("/generate-new-password", generateVerificationCodeTPO);
-router.post(("/update-password", isAuthenticatedTPO, updatePasswordTPO));
-    
+// Was `router.post(("/update-password", ...))` — the extra parens collapsed the
+// three arguments into one via the comma operator, so this path was never
+// actually registered and every request to it 404'd.
+router.post("/update-password", isAuthenticatedTPO, updatePasswordTPO);
+router.put("/update-profile", isAuthenticatedTPO, updateProfileTPO);
+
+
 export default router;

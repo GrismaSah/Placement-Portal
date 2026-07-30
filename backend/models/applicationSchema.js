@@ -28,15 +28,17 @@ const applicationSchema = new mongoose.Schema({
     type: String,
     required: [true, "Please enter your Address!"],
   },
+  // Bytes live in the GridFS "resumes" bucket. Each application holds its OWN
+  // copy, not a reference to the applicant's profile resume, so that what a
+  // recruiter received stays exactly what was submitted.
   resume: {
-    public_id: {
-      type: String,
+    fileId: {
+      type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
-    url: {
-      type: String,
-      required: true,
-    },
+    filename: { type: String },
+    contentType: { type: String },
+    size: { type: Number },
   },
   applicantID: {
     user: {

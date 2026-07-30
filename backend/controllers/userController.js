@@ -5,6 +5,7 @@ import { sendToken } from "../utils/jwtToken.js";
 import { TPO } from "../models/tpoModel.js";
 import { sendVerificationCode } from "../utils/verifyEmail/email.js";
 import { sentRegisteredEmail } from "../utils/registeredUser/register.js";
+import { emitProfileUpdate } from "../socket.js";
 
 export const register = catchAsyncErrors(async (req, res, next) => {
   const { name, email, phone, password, role, enrollment, address } = req.body;
@@ -191,6 +192,40 @@ export const generateNewPassword = catchAsyncErrors(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Password updated successfully.",
+  });
+});
+
+// update own profile
+export const updateProfile = catchAsyncErrors(async (req, res, next) => {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    return next(new ErrorHandler("User not found.", 404));
+  }
+
+  // Assign only these, field by field. Never Object.assign(user, req.body):
+  // role, status, isVerified, email and password all live on this same
+  // document, so a blind merge would let a student PUT {role:"TNP",
+  // status:"Approved"} and promote themselves past the TPO approval flow.
+  const { name, phone, address, enrollment } = req.body;
+
+  if (name !== undefined) user.name = name;
+  if (phone !== undefined) user.phone = phone;
+  if (address !== undefined) user.address = address;
+  // Enrolment only means anything for students.
+  if (enrollment !== undefined && user.role === "Student") {
+    user.enrollment = enrollment;
+  }
+
+  // save() rather than findByIdAndUpdate so the schema validators run.
+  await user.save();
+
+  const safeUser = await User.findById(user._id).select("-password");
+  emitProfileUpdate(user._id, safeUser);
+
+  res.status(200).json({
+    success: true,
+    message: "Profile updated successfully.",
+    user: safeUser,
   });
 });
 

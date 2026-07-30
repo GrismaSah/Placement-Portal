@@ -8,7 +8,7 @@ import ResumeModal from "./ResumeModal";
 const MyApplications = () => {
   const [applications, setApplications] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [resumeImageUrl, setResumeImageUrl] = useState("");
+  const [activeResume, setActiveResume] = useState(null);
 
   const { isAuthorized, user } = useContext(Context);
   const navigateTo = useNavigate();
@@ -88,8 +88,8 @@ const MyApplications = () => {
     }
   }
 
-  const openModal = (imageUrl) => {
-    setResumeImageUrl(imageUrl);
+  const openModal = (resume) => {
+    setActiveResume(resume);
     setModalOpen(true);
   };
 
@@ -165,6 +165,17 @@ const MyApplications = () => {
           );
         }
       })()}
+
+      {/* ResumeModal was imported but never rendered, so clicking a resume here
+          silently did nothing. */}
+      {modalOpen && activeResume && (
+        <ResumeModal
+          fileId={activeResume.fileId}
+          contentType={activeResume.contentType}
+          filename={activeResume.filename}
+          onClose={() => setModalOpen(false)}
+        />
+      )}
     </section>
   );
 };
@@ -225,12 +236,22 @@ const JobSeekerCard = ({ element, deleteApplication, openModal }) => {
             CoverLetter:<span> {element.coverLetter}</span>
           </p>
         </div>
+        {/* PDFs cannot render as an <img>, and the file endpoint needs auth. */}
         <div className="resume">
-          <img
-            src={element.resume.url}
-            alt="resume"
-            onClick={() => openModal(element.resume.url)}
-          />
+          {element.resume?.fileId ? (
+            <button
+              type="button"
+              className="resume_open"
+              onClick={() => openModal(element.resume)}
+            >
+              <span className="resume_open_name">
+                {element.resume.filename || "Resume"}
+              </span>
+              <span className="resume_open_cta">View resume</span>
+            </button>
+          ) : (
+            <p>No resume attached</p>
+          )}
         </div>
         <div className="btn_area">
           <button onClick={() => deleteApplication(element._id)}>

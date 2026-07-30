@@ -1605,6 +1605,515 @@ nav .menu li a:hover::before {
 nav .hamburger {
   display: none;
 }
+
+/* ---------------------------------------------------------------------------
+   Avatar + account dropdown (replaces the old bare LOGOUT button)
+   --------------------------------------------------------------------------- */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  user-select: none;
+}
+/* The global `* { overflow-x: hidden }` at the top of this file computes to
+   `overflow: hidden auto` on every element. That turns .account into a clipping
+   box, which silently clipped its own absolutely-positioned dropdown down to the
+   48px avatar — the menu was in the DOM with correct size, just never painted.
+   Opt this one chain back out. html/body keep the global rule, so this cannot
+   reintroduce horizontal page scroll. */
+nav,
+nav .container,
+nav .nav_actions,
+nav .nav_actions .account {
+  overflow: visible;
+}
+
+/* Always-visible action strip. Sits outside ul.menu so it survives the
+   responsive rule that slides that list off-screen below 1520px. */
+nav .nav_actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-left: auto;
+  padding-left: 20px;
+}
+nav .nav_actions .account {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+nav .nav_actions .avatar_trigger {
+  padding: 0;
+  border: 2px solid rgba(241, 243, 246, 0.6);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+nav .nav_actions .avatar_trigger:hover {
+  border-color: #f1f3f6;
+  background: transparent;
+  transform: scale(1.05);
+}
+nav .nav_actions .avatar_trigger:focus-visible {
+  outline: 3px solid #7fb3ff;
+  outline-offset: 2px;
+}
+nav .nav_actions .account_menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 280px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+  padding: 8px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+nav .nav_actions .account_menu_header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  margin-bottom: 6px;
+}
+nav .nav_actions .account_menu_header p:first-child {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c3e50;
+  word-break: break-word;
+}
+nav .nav_actions .account_menu_header p:nth-child(2) {
+  font-size: 13px;
+  color: #7f8c8d;
+  word-break: break-all;
+}
+nav .nav_actions .account_menu_header span {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #2d4156;
+  background: #eef2f7;
+  border-radius: 999px;
+}
+nav .nav_actions .account_menu a,
+nav .nav_actions .account_menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  color: #2c3e50;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+nav .nav_actions .account_menu a::before {
+  display: none;
+}
+nav .nav_actions .account_menu a:hover {
+  background: #f1f3f6;
+  color: #2c3e50;
+}
+nav .nav_actions .account_menu button:hover {
+  background: #fdecea;
+  color: #ad2828;
+  border: none;
+  font-weight: 500;
+}
+
+/* ---------------------------------------------------------------------------
+   Profile page
+   --------------------------------------------------------------------------- */
+.profile {
+  background: #f1f3f6;
+  min-height: 100vh;
+  padding: 50px 20px;
+}
+.profile .container {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.profile .profile_header {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  padding: 32px;
+  background: linear-gradient(135deg, #2d4156, #3a5275);
+  border-radius: 14px;
+  color: #ffffff;
+}
+.profile .profile_header .avatar {
+  border: 3px solid rgba(255, 255, 255, 0.55);
+}
+.profile .profile_identity h2 {
+  font-size: 28px;
+  font-weight: 600;
+}
+.profile .profile_identity > p {
+  margin-top: 4px;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.85);
+  word-break: break-all;
+}
+.profile .badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.profile .badge {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+.profile .badge.status.approved {
+  background: #1e8e5a;
+}
+.profile .badge.status.pending {
+  background: #c98a12;
+}
+.profile .badge.status.declined {
+  background: #ad2828;
+}
+.profile .profile_panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 30px;
+  align-items: start;
+}
+.profile .panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 30px;
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.profile .panel h3 {
+  font-size: 19px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+.profile .panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+.profile .panel input {
+  padding: 12px 14px;
+  font-size: 15px;
+  font-weight: 400;
+  color: #2c3e50;
+  background: #f8f9fa;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.profile .panel input:focus {
+  border-color: #3a5275;
+  box-shadow: 0 0 0 3px rgba(58, 82, 117, 0.12);
+}
+.profile .panel input:disabled {
+  color: #7f8c8d;
+  background: #eceff1;
+  cursor: not-allowed;
+}
+.profile .panel small {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #ad2828;
+}
+.profile .panel small.hint {
+  color: #7f8c8d;
+}
+.profile .panel button {
+  margin-top: 4px;
+  padding: 13px 22px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2d4156, #3a5275);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.profile .panel button:hover:not(:disabled) {
+  opacity: 0.88;
+}
+.profile .panel button:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+}
+
+@media (max-width: 714px) {
+  .profile .profile_header {
+    flex-direction: column;
+    text-align: center;
+  }
+  .profile .badges {
+    justify-content: center;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Resume section (profile) + resume viewing
+   --------------------------------------------------------------------------- */
+.profile .resume_panel {
+  grid-column: 1 / -1;
+}
+.profile .resume_panel textarea {
+  padding: 12px 14px;
+  font-size: 15px;
+  color: #2c3e50;
+  background: #f8f9fa;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+}
+.profile .resume_panel textarea:focus {
+  border-color: #3a5275;
+  box-shadow: 0 0 0 3px rgba(58, 82, 117, 0.12);
+}
+.profile .resume_form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.profile .resume_group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+}
+.profile .resume_group legend {
+  padding: 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #2d4156;
+}
+.profile .resume_row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  align-items: start;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+.profile .resume_row .wide {
+  grid-column: 1 / -1;
+}
+.profile .resume_row input,
+.profile .resume_row textarea {
+  background: #ffffff;
+}
+.profile .resume_empty_row {
+  font-size: 14px;
+  color: #7f8c8d;
+}
+.profile .resume_panel button.ghost {
+  align-self: flex-start;
+  padding: 9px 16px;
+  font-size: 14px;
+  color: #2d4156;
+  background: #eef2f7;
+  border: 1px dashed #9fb0c4;
+}
+.profile .resume_panel button.danger {
+  background: #ad2828;
+}
+.profile .resume_panel button.row_remove {
+  align-self: end;
+  padding: 9px 14px;
+  font-size: 13px;
+}
+.profile .skill_tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.profile .skill_tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2d4156, #3a5275);
+  border-radius: 999px;
+}
+.profile .skill_tag button {
+  padding: 0;
+  margin: 0;
+  width: 18px;
+  height: 18px;
+  font-size: 15px;
+  line-height: 1;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+}
+.profile .skill_input {
+  display: flex;
+  gap: 10px;
+}
+.profile .skill_input input {
+  flex: 1;
+}
+.profile .resume_actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.profile .resume_file {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.profile .resume_file_card,
+.profile .resume_file_empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px;
+  background: #f8f9fa;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+}
+.profile .resume_file_name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  word-break: break-all;
+}
+.profile .resume_file_sub {
+  margin-top: 3px;
+  font-size: 13px;
+  color: #7f8c8d;
+}
+.profile .resume_file_actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.profile .resume_file_actions button,
+.profile .resume_file_empty button {
+  margin-top: 0;
+  padding: 9px 16px;
+  font-size: 14px;
+}
+
+/* Resume card used in the applications lists */
+.resume_open {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 20px;
+  text-align: left;
+  background: #f1f3f6;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.resume_open:hover {
+  background: #e4e9f0;
+}
+.resume_open_name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c3e50;
+  word-break: break-all;
+}
+.resume_open_cta {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2d5649;
+}
+
+.application .resume_choice {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.application .resume_option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  cursor: pointer;
+}
+.application .resume_option input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+/* The viewer has to be big enough to actually read a PDF in. */
+.resume-modal .resume-pdf {
+  width: 100%;
+  height: 78vh;
+  border: none;
+  background: #ffffff;
+}
+.resume-modal .resume-loading,
+.resume-modal .resume-error {
+  padding: 40px 20px;
+  font-size: 17px;
+  text-align: center;
+  color: #2c3e50;
+}
+.resume-modal .resume-error {
+  color: #ad2828;
+}
+.resume-modal .resume-download {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2d4156, #3a5275);
+  border-radius: 8px;
+}
 @media (max-width: 1520px) {
   nav .container {
     min-width: 100%;

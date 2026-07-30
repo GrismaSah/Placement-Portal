@@ -2,7 +2,14 @@ import { catchAsyncErrors } from "../middlewares/catchAsyncError.js";
 import ErrorHandler from "../middlewares/error.js";
 import { Application } from "../models/applicationSchema.js";
 import { Job } from "../models/jobSchema.js";
-import cloudinary from "cloudinary";
+import { Resume } from "../models/resumeSchema.js";
+import {
+  ALLOWED_RESUME_TYPES,
+  MAX_RESUME_BYTES,
+  copyFile,
+  deleteFile,
+  uploadFromPath,
+} from "../utils/gridfs.js";
 
 export const postApplication = catchAsyncErrors(async (req, res, next) => {
   const { role } = req.user;
@@ -13,32 +20,46 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
     );
   }
 
-  if (!req.files || Object.keys(req.files).length === 0) {
-    return next(new ErrorHandler("Resume File Required!", 400));
-  }
-
-  const { resume } = req.files;
-  const allowedFormats = ["image/png", "image/jpeg", "image/webp"];
-  if (!allowedFormats.includes(resume.mimetype)) {
-    return next(
-      new ErrorHandler("Invalid file type. Please upload a PNG file.", 400)
-    );
-  }
-
-  const cloudinaryResponse = await cloudinary.uploader.upload(
-    resume.tempFilePath
-  );
-
-  if (!cloudinaryResponse || cloudinaryResponse.error) {
-    console.error(
-      "Cloudinary Error:",
-      cloudinaryResponse.error || "Unknown Cloudinary error"
-    );
-    return next(new ErrorHandler("Failed to upload Resume to Cloudinary", 500));
-  }
-
   const { name, email, coverLetter, phone, address, jobId, enrollment } =
     req.body;
+
+  const uploaded = req.files?.resume;
+  const wantsSaved =
+    req.body.useSavedResume === "true" || req.body.useSavedResume === true;
+
+  let resume;
+
+  if (uploaded) {
+    if (!ALLOWED_RESUME_TYPES.includes(uploaded.mimetype)) {
+      return next(
+        new ErrorHandler("Resume must be a PDF, PNG, JPEG or WebP file.", 400)
+      );
+    }
+    if (uploaded.size > MAX_RESUME_BYTES) {
+      return next(new ErrorHandler("Resume must be 5MB or smaller.", 400));
+    }
+    resume = await uploadFromPath(uploaded.tempFilePath, {
+      filename: uploaded.name,
+      contentType: uploaded.mimetype,
+    });
+  } else if (wantsSaved) {
+    const saved = await Resume.findOne({ user: req.user._id });
+    if (!saved?.file?.fileId) {
+      return next(
+        new ErrorHandler("No saved resume found. Please upload one.", 400)
+      );
+    }
+    // Copy rather than reference: an application must be an immutable record of
+    // what was actually submitted, so later editing or deleting the profile
+    // resume cannot alter or break what the recruiter already received.
+    resume = await copyFile(
+      saved.file.fileId,
+      saved.file.filename,
+      saved.file.contentType
+    );
+  } else {
+    return next(new ErrorHandler("Resume File Required!", 400));
+  }
   const applicantID = {
     user: req.user._id,
     role: "Student",
@@ -96,10 +117,7 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
     applicantID,
     TNPID,
     jobId,
-    resume: {
-      public_id: cloudinaryResponse.public_id,
-      url: cloudinaryResponse.secure_url,
-    },
+    resume,
   });
 
   res.status(200).json({
@@ -162,7 +180,19 @@ export const jobseekerDeleteApplication = catchAsyncErrors(
     if (!application) {
       return next(new ErrorHandler("Application not found!", 404));
     }
+
+    // Ownership check: without it any student could delete any other student's
+    // application just by knowing its id.
+    if (String(application.applicantID?.user) !== String(req.user._id)) {
+      return next(
+        new ErrorHandler("Not authorised to delete this application.", 403)
+      );
+    }
+
+    // Release this application's own copy of the resume bytes.
+    await deleteFile(application.resume?.fileId);
     await application.deleteOne();
+
     res.status(200).json({
       success: true,
       message: "Application Deleted!",

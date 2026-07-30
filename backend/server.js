@@ -1,5 +1,7 @@
+import http from "http";
 import app from "./app.js";
 import cloudinary from "cloudinary";
+import { initSocket } from "./socket.js";
 
 
 cloudinary.v2.config({
@@ -8,7 +10,11 @@ cloudinary.v2.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// socket.io needs the underlying HTTP server, so create it explicitly rather
+// than letting app.listen() build one internally.
+const server = http.createServer(app);
+initSocket(server);
 
-app.listen(process.env.PORT, () => {
+server.listen(process.env.PORT, () => {
   console.log(`Server running at port ${process.env.PORT}`);
 });

@@ -11,6 +11,7 @@ import userRouter from "./routes/userRoutes.js";
 import jobRouter from "./routes/jobRoutes.js";
 import applicationRouter from "./routes/applicationRoutes.js";
 import tpoRouter from "./routes/tpoRoutes.js";
+import resumeRouter from "./routes/resumeRoutes.js";
 
 
 const app = express();
@@ -33,6 +34,11 @@ app.use(
   fileUpload({
     useTempFiles: true,
     tempFileDir: "/tmp/",
+    // Previously uncapped: any client could stream an arbitrarily large file
+    // straight onto the server's disk.
+    limits: { fileSize: 5 * 1024 * 1024 },
+    abortOnLimit: true,
+    responseOnLimit: "Resume must be 5MB or smaller.",
   })
 );
 
@@ -40,6 +46,7 @@ app.use("/api/v1/user", userRouter);
 app.use("/api/v1/job", jobRouter);
 app.use("/api/v1/application", applicationRouter);
 app.use("/api/v1/tpo", tpoRouter);
+app.use("/api/v1/resume", resumeRouter);
 dbConnection();
 
 app.use(errorMiddleware);

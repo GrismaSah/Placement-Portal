@@ -4,7 +4,9 @@ import "./App.css";
 import { Context } from "./main";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import axios from "axios";
+import { disconnectSocket, getSocket } from "./socket.js";
 import LoaderPage from "./components/Loader/LoaderPage.jsx";
 import Navbar from "./components/Layout/Navbar";
 import Footer from "./components/Layout/Footer";
@@ -27,12 +29,14 @@ const JobApplications = lazy(() =>
 );
 const TPOLogin = lazy(() => import("./components/TPO/Login"));
 const TPORegister = lazy(() => import("./components/TPO/Register"));
+const Profile = lazy(() => import("./components/Profile/Profile.jsx"));
 
 
 axios.defaults.baseURL = "http://localhost:4000";
 
 const App = () => {
-  const { isAuthorized, setIsAuthorized, setUser, user } = useContext(Context);
+  const { isAuthorized, setIsAuthorized, setUser, user, setAuthChecked } =
+    useContext(Context);
   
 
 
@@ -59,11 +63,37 @@ const App = () => {
         setIsAuthorized(true);
       } catch (error) {
         setIsAuthorized(false);
+      } finally {
+        // Signals that auth has been resolved either way, so protected pages
+        // know the difference between "not logged in" and "not checked yet".
+        setAuthChecked(true);
       }
     };
     fetchUser();
-    console.log(user);
-    
+  }, [isAuthorized]);
+
+  // Live profile sync. The server pushes only to `user:<id>` rooms, so this
+  // receives this user's own edits made from any other device or tab.
+  useEffect(() => {
+    if (!isAuthorized) {
+      disconnectSocket();
+      return;
+    }
+
+    const socket = getSocket();
+    const onProfileUpdated = (updated) => {
+      setUser(updated);
+      toast.success("Profile updated", { id: "profile-sync" });
+    };
+
+    socket.on("profile:updated", onProfileUpdated);
+    if (!socket.connected) socket.connect();
+
+    // Detach the listener on teardown, otherwise a stale socket keeps firing
+    // setUser into an unmounted tree.
+    return () => {
+      socket.off("profile:updated", onProfileUpdated);
+    };
   }, [isAuthorized]);
 
   return (
@@ -84,6 +114,7 @@ const App = () => {
             <Route path="/job/me" element={<MyJobs />} />
             <Route path="/tpo/login" element={<TPOLogin />} />
             <Route path="/tpo/register" element={<TPORegister />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

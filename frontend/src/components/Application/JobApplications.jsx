@@ -8,7 +8,7 @@ import ResumeModal from "./ResumeModal";
 const JobApplications = () => {
   const [applications, setApplications] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [resumeImageUrl, setResumeImageUrl] = useState("");
+  const [activeResume, setActiveResume] = useState(null);
 
   const { isAuthorized, user } = useContext(Context);
   const navigateTo = useNavigate();
@@ -39,8 +39,8 @@ const JobApplications = () => {
     navigateTo("/");
   }
 
-  const openModal = (imageUrl) => {
-    setResumeImageUrl(imageUrl);
+  const openModal = (resume) => {
+    setActiveResume(resume);
     setModalOpen(true);
   };
 
@@ -69,8 +69,13 @@ const JobApplications = () => {
         )}
       </div>
 
-      {modalOpen && (
-        <ResumeModal imageUrl={resumeImageUrl} onClose={closeModal} />
+      {modalOpen && activeResume && (
+        <ResumeModal
+          fileId={activeResume.fileId}
+          contentType={activeResume.contentType}
+          filename={activeResume.filename}
+          onClose={closeModal}
+        />
       )}
     </section>
   );
@@ -99,12 +104,23 @@ const TNPCard = ({ element, openModal }) => {
             <span>CoverLetter:</span> {element.coverLetter}
           </p>
         </div>
+        {/* A PDF cannot be rendered as an <img>, and the file endpoint requires
+            auth, so show a card that opens the authenticated viewer instead. */}
         <div className="resume">
-          <img
-            src={element.resume.url}
-            alt="resume"
-            onClick={() => openModal(element.resume.url)}
-          />
+          {element.resume?.fileId ? (
+            <button
+              type="button"
+              className="resume_open"
+              onClick={() => openModal(element.resume)}
+            >
+              <span className="resume_open_name">
+                {element.resume.filename || "Resume"}
+              </span>
+              <span className="resume_open_cta">View resume</span>
+            </button>
+          ) : (
+            <p>No resume attached</p>
+          )}
         </div>
       </div>
     </>

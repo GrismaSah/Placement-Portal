@@ -1,0 +1,92 @@
+# ---------------------------------------------------------------------------
+# Dependencies
+# ---------------------------------------------------------------------------
+node_modules/
+jspm_packages/
+.pnp
+.pnp.*
+.yarn/cache
+.yarn/unplugged
+.yarn/install-state.gz
+
+# ---------------------------------------------------------------------------
+# Secrets and local environment
+# .env was committed once already (in 2854ca2) — keep it out from here on.
+# .env.example is deliberately allowed through as a checked-in template.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.json
+
+# ---------------------------------------------------------------------------
+# Build output
+# ---------------------------------------------------------------------------
+dist/
+dist-ssr/
+build/
+out/
+*.local
+
+# ---------------------------------------------------------------------------
+# Caches
+# ---------------------------------------------------------------------------
+.cache/
+.parcel-cache/
+.vite/
+.rollup.cache/
+.eslintcache
+.stylelintcache
+.npm/
+.node_repl_history
+*.tsbuildinfo
+coverage/
+.nyc_output/
+
+# ---------------------------------------------------------------------------
+# Logs
+# ---------------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---------------------------------------------------------------------------
+# Runtime / temporary
+# express-fileupload stages resume uploads on disk before the Cloudinary call.
+# ---------------------------------------------------------------------------
+tmp/
+temp/
+uploads/
+*.pid
+*.seed
+*.pid.lock
+
+# ---------------------------------------------------------------------------
+# Editors and IDEs
+# ---------------------------------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+
+# ---------------------------------------------------------------------------
+# OS cruft (this repo lives inside a OneDrive-synced folder)
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/

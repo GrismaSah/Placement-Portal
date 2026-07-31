@@ -57,11 +57,52 @@ const userSchema = new mongoose.Schema({
       return this.role === "TNP";
     },
   },
+
+  /**
+   * Academic profile (students only).
+   *
+   * The user record previously held name/email/phone/address/enrollment and
+   * nothing else, and education lived as free text inside the resume document
+   * — so nothing was filterable. Eligibility rules on a job and every
+   * branch-wise figure on the placement dashboard need these as real fields.
+   */
+  branch: { type: String, trim: true },
+  batch: { type: Number }, // graduating year, e.g. 2027
+  cgpa: {
+    type: Number,
+    min: [0, "CGPA cannot be negative."],
+    max: [10, "CGPA cannot exceed 10."],
+  },
+  backlogs: { type: Number, default: 0, min: 0 },
+
+  placementStatus: {
+    type: String,
+    enum: ["Unplaced", "Placed", "Opted out"],
+    default: "Unplaced",
+  },
+
+  // Company the student ultimately joined, denormalised from the placed
+  // application so reporting does not have to re-derive it every query.
+  placedAt: {
+    company: { type: String },
+    ctc: { type: Number },
+    placedOn: { type: Date },
+  },
+
   createdAt: {
     type: Date,
     default: Date.now,
   },
 });
+
+// Email uniqueness was only checked in the controller, which two concurrent
+// registrations could both pass.
+userSchema.index({ email: 1 }, { unique: true });
+
+// Supports the placement dashboard's branch/batch breakdowns and the TNP
+// approval queue.
+userSchema.index({ role: 1, status: 1 });
+userSchema.index({ role: 1, branch: 1, batch: 1 });
 
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {

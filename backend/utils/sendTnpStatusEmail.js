@@ -1,12 +1,13 @@
 import transporter from "./email.config.js";
 import { ApprovalTnpRequestTemplate, DeclineTnpRequestTemplate } from "./emailTemplate/tnpStatusTemplate.js";
+import { BRANDING } from "../config/branding.js";
 
 export const sendTnpStatusEmailApproved = async (doc) => {
   const mailOptions = {
-    from: `"NITA-PLACEMENT-CELL" <${process.env.NODEMAIL_EMAIL}>`,
+    from: `"${BRANDING.sender}" <${process.env.NODEMAIL_EMAIL}>`,
     to: doc.email,
-    subject: "TNP Request Approved",
-    text: `Dear ${doc.name},\n\nYour TNP request has been approved. Please proceed with the next steps or contact the TPO for further guidance.\n\nBest regards,\nNITA Placement Cell`,
+    subject: "Your recruiter account is approved",
+    text: `Dear ${doc.name},\n\nThe ${BRANDING.office} has approved your recruiter account. You can now post openings and review applicants.\n\nBest regards,\n${BRANDING.office}`,
     html: ApprovalTnpRequestTemplate(doc.name),
   };
   try {
@@ -20,10 +21,10 @@ export const sendTnpStatusEmailApproved = async (doc) => {
 
 export const sendTnpStatusEmailDeclined = async (doc) => {
   const mailOptions = {
-    from: `"NITA-PLACEMENT-CELL" <${process.env.NODEMAIL_EMAIL}>`,
+    from: `"${BRANDING.sender}" <${process.env.NODEMAIL_EMAIL}>`,
     to: doc.email,
-    subject: "TNP Request Declined",
-    text: `Dear ${doc.name},\n\nWe regret to inform you that your TNP request has been declined. Please contact the TPO for further clarification.\n\nBest regards,\nNITA Placement Cell`,
+    subject: "About your recruiter account",
+    text: `Dear ${doc.name},\n\nAfter review, the ${BRANDING.office} is not able to approve your recruiter account at this time. Please contact ${BRANDING.supportEmail} for further clarification.\n\nBest regards,\n${BRANDING.office}`,
     html: DeclineTnpRequestTemplate(doc.name),
   };
   try {

@@ -1,76 +1,86 @@
 import { useContext, useEffect, Suspense, lazy } from "react";
-import "./App.css";
 
 import { Context } from "./main";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
-import axios from "axios";
+import { api } from "./lib/api";
 import { disconnectSocket, getSocket } from "./socket.js";
-import LoaderPage from "./components/Loader/LoaderPage.jsx";
-import Navbar from "./components/Layout/Navbar";
-import Footer from "./components/Layout/Footer";
-const ForgotPassword = lazy(() => import("./components/Forgot/ForgotPassword.jsx"));
+import PublicShell from "./components/Layout/PublicShell.jsx";
+import AppShell from "./components/Layout/AppShell.jsx";
+import {
+  ProtectedRoute,
+  PublicOnlyRoute,
+  RoleRoute,
+} from "./components/routing/ProtectedRoute.jsx";
+import { ROLES } from "./lib/roles";
 
-const Login = lazy(() => import("./components/Auth/Login"));
-const Register = lazy(() => import("./components/Auth/Register"));
-const Home = lazy(() => import("./components/Home/Home"));
-const Jobs = lazy(() => import("./components/Job/Jobs"));
-const JobDetails = lazy(() => import("./components/Job/JobDetails"));
-const Application = lazy(() => import("./components/Application/Application"));
-const MyApplications = lazy(() =>
-  import("./components/Application/MyApplications")
-);
-const PostJob = lazy(() => import("./components/Job/PostJob"));
-const NotFound = lazy(() => import("./components/NotFound/NotFound"));
-const MyJobs = lazy(() => import("./components/Job/MyJobs"));
-const JobApplications = lazy(() =>
-  import("./components/Application/JobApplications")
-);
-const TPOLogin = lazy(() => import("./components/TPO/Login"));
-const TPORegister = lazy(() => import("./components/TPO/Register"));
-const Profile = lazy(() => import("./components/Profile/Profile.jsx"));
+/**
+ * Routes are imported EAGERLY, on purpose.
+ *
+ * Every screen used to be React.lazy() behind a single <Suspense> that wrapped
+ * the whole <Routes> block. That combination is what produced the white flash
+ * on every navigation: the fallback replaced the entire tree — shell included
+ * — while a separate chunk was fetched over the network.
+ *
+ * The whole app is ~95KB gzipped. Splitting that into twenty chunks costs a
+ * round trip per navigation and saves nothing worth having, so the app now
+ * ships as one bundle and route changes are instant, with no fallback at all.
+ *
+ * Only the design-system reference stays lazy: it is developer-facing, never
+ * linked from the product, and would otherwise be dead weight for every user.
+ */
+import Landing from "./components/Landing/Landing.jsx";
+import Login from "./components/Auth/Login";
+import Register from "./components/Auth/Register";
+import ForgotPassword from "./components/Forgot/ForgotPassword.jsx";
+import Dashboard from "./components/Dashboard/Dashboard.jsx";
+import Jobs from "./components/Job/Jobs";
+import JobDetails from "./components/Job/JobDetails";
+import Profile from "./components/Profile/Profile.jsx";
+import Application from "./components/Application/Application";
+import MyApplications from "./components/Application/MyApplications";
+import PostJob from "./components/Job/PostJob";
+import MyJobs from "./components/Job/MyJobs";
+import JobApplications from "./components/Application/JobApplications";
+import TnpApprovals from "./components/Officer/TnpApprovals";
+import Analytics from "./components/Officer/Analytics";
+import Students from "./components/Officer/Students";
+import NotFound from "./components/NotFound/NotFound";
 
-
-axios.defaults.baseURL = "http://localhost:4000";
+const DesignSystem = lazy(() => import("./components/DesignSystem/DesignSystem.jsx"));
 
 const App = () => {
-  const { isAuthorized, setIsAuthorized, setUser, user, setAuthChecked } =
+  const { isAuthorized, setIsAuthorized, setUser, setAuthChecked } =
     useContext(Context);
-  
-
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await axios.get(
-          "/api/v1/user/getuser",
-          {
-            withCredentials: true,
-          }
-        );
-
+        const response = await api.get("/api/v1/user/getuser");
         const user = response.data.user;
         setUser(user);
-        // console.log('user', response.data);
-        if(user === null){
-          const response = await axios.get("/api/v1/tpo/me", {
-            withCredentials: true,
-          });
-          setUser(response.data.user);
+
+        // A TPO's token verifies against a different collection, so /getuser
+        // resolves to null for them. That null is the signal to try /tpo/me.
+        if (user === null) {
+          const tpo = await api.get("/api/v1/tpo/me");
+          setUser(tpo.data.user);
         }
-        
+
         setIsAuthorized(true);
-      } catch (error) {
+      } catch {
         setIsAuthorized(false);
       } finally {
-        // Signals that auth has been resolved either way, so protected pages
-        // know the difference between "not logged in" and "not checked yet".
+        // Distinguishes "not logged in" from "not checked yet", which is what
+        // stops a refresh on a protected route bouncing the user to /login.
         setAuthChecked(true);
       }
     };
     fetchUser();
-  }, [isAuthorized]);
+    // Runs once. Re-running on isAuthorized meant every sign-in and sign-out
+    // fired a redundant round trip before the UI could settle.
+  }, []);
 
   // Live profile sync. The server pushes only to `user:<id>` rooms, so this
   // receives this user's own edits made from any other device or tab.
@@ -89,40 +99,173 @@ const App = () => {
     socket.on("profile:updated", onProfileUpdated);
     if (!socket.connected) socket.connect();
 
-    // Detach the listener on teardown, otherwise a stale socket keeps firing
-    // setUser into an unmounted tree.
     return () => {
       socket.off("profile:updated", onProfileUpdated);
     };
   }, [isAuthorized]);
 
   return (
-    <>
-      <BrowserRouter>
-        <Navbar />
-        <Suspense fallback={<LoaderPage />}>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/" element={<Home />} />
-            <Route path="/job/getall" element={<Jobs />} />
-            <Route path="/job/:id" element={<JobDetails />} />
-            <Route path="/application/:id" element={<Application />} />
-            <Route path="/applications/me" element={<MyApplications />} />
-            <Route path="/applications/:jobId" element={<JobApplications />} />
-            <Route path="/job/post" element={<PostJob />} />
-            <Route path="/job/me" element={<MyJobs />} />
-            <Route path="/tpo/login" element={<TPOLogin />} />
-            <Route path="/tpo/register" element={<TPORegister />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
-        </Suspense>
-        <Footer />
-      </BrowserRouter>
-    </>
+    <BrowserRouter>
+      <Routes>
+        {/* ================= PUBLIC ================= */}
+        <Route element={<PublicShell />}>
+          <Route path="/" element={<Landing />} />
+        </Route>
+
+        <Route
+          path="/login"
+          element={
+            <PublicOnlyRoute>
+              <Login />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PublicOnlyRoute>
+              <Register />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+
+        {/* ================= AUTHENTICATED ================= */}
+        <Route
+          path="/app"
+          element={
+            <ProtectedRoute>
+              <AppShell />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/app/dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="jobs" element={<Jobs />} />
+          <Route path="jobs/:id" element={<JobDetails />} />
+          <Route path="profile" element={<Profile />} />
+
+          {/* ---- Student ---- */}
+          <Route
+            path="jobs/:id/apply"
+            element={
+              <RoleRoute allow={[ROLES.STUDENT]}>
+                <Application />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="applications"
+            element={
+              <RoleRoute allow={[ROLES.STUDENT]}>
+                <MyApplications />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="resume"
+            element={
+              <RoleRoute allow={[ROLES.STUDENT]}>
+                <Profile />
+              </RoleRoute>
+            }
+          />
+
+          {/* ---- Recruiter ---- */}
+          <Route
+            path="postings"
+            element={
+              <RoleRoute allow={[ROLES.RECRUITER]}>
+                <MyJobs />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="postings/new"
+            element={
+              <RoleRoute allow={[ROLES.RECRUITER]}>
+                <PostJob />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="postings/:jobId/applicants"
+            element={
+              <RoleRoute allow={[ROLES.RECRUITER]}>
+                <JobApplications />
+              </RoleRoute>
+            }
+          />
+
+          {/* ---- Placement Officer ---- */}
+          <Route
+            path="approvals"
+            element={
+              <RoleRoute allow={[ROLES.OFFICER]}>
+                <TnpApprovals />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="analytics"
+            element={
+              <RoleRoute allow={[ROLES.OFFICER]}>
+                <Analytics />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="students"
+            element={
+              <RoleRoute allow={[ROLES.OFFICER]}>
+                <Students />
+              </RoleRoute>
+            }
+          />
+        </Route>
+
+        {/* ================= LEGACY REDIRECTS ================= */}
+        {/* The old flat routes stay working — students bookmark job links. */}
+        <Route path="/job/getall" element={<Navigate to="/app/jobs" replace />} />
+        <Route path="/job/post" element={<Navigate to="/app/postings/new" replace />} />
+        <Route path="/job/me" element={<Navigate to="/app/postings" replace />} />
+        <Route
+          path="/applications/me"
+          element={<Navigate to="/app/applications" replace />}
+        />
+        <Route path="/profile" element={<Navigate to="/app/profile" replace />} />
+        <Route path="/tpo/login" element={<Navigate to="/login" replace />} />
+        <Route path="/tpo/register" element={<Navigate to="/register" replace />} />
+
+        <Route
+          path="/design-system"
+          element={
+            <Suspense fallback={null}>
+              <DesignSystem />
+            </Suspense>
+          }
+        />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: "var(--surface-overlay)",
+            color: "var(--text-primary)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-card)",
+            boxShadow: "var(--shadow-lg)",
+            fontSize: "0.9375rem",
+            maxWidth: "26rem",
+          },
+          success: { iconTheme: { primary: "var(--color-success-500)", secondary: "#fff" } },
+          error: { iconTheme: { primary: "var(--color-danger-500)", secondary: "#fff" } },
+        }}
+      />
+    </BrowserRouter>
   );
 };
 

@@ -1,47 +1,58 @@
-import React, { useContext, useEffect, useState } from "react";
-import axios from "axios";
+import { useContext, useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { Navigate } from "react-router-dom";
+import { FiLock, FiUser } from "react-icons/fi";
 import { Context } from "../../main";
-import Avatar from "../Layout/Avatar";
-import { displayName, roleLabel } from "../../utils/avatar";
-import ResumeSection from "./ResumeSection";
+import { api, apiError } from "../../lib/api";
 import { getSocket } from "../../socket";
+import { displayName } from "../../utils/avatar";
+import { isOfficer, isStudent, roleLabelLong } from "../../lib/roles";
+import PageHeader from "../Layout/PageHeader";
+import { Avatar, Badge, Button, Card, CardHeader, Input, Tabs } from "../ui";
+import ResumeSection from "./ResumeSection";
 
-const isTPO = (user) => user?.role === "TPO";
-
-const emptyDetails = {
-  name: "",
-  firstname: "",
-  lastname: "",
-  phone: "",
-  address: "",
-  enrollment: "",
-};
-
+/**
+ * Account settings, and — for students — the resume builder.
+ *
+ * TPO records live in a separate collection with firstname/lastname instead of
+ * a single name, and their own update endpoint, so both shapes are handled
+ * here rather than in two near-identical screens.
+ */
 const Profile = () => {
-  const { isAuthorized, user, setUser, authChecked } = useContext(Context);
+  const { user, setUser } = useContext(Context);
 
-  const [details, setDetails] = useState(emptyDetails);
-  const [errors, setErrors] = useState({});
+  const [tab, setTab] = useState(isStudent(user) ? "resume" : "details");
+  const [details, setDetails] = useState({
+    name: "",
+    firstname: "",
+    lastname: "",
+    phone: "",
+    address: "",
+    enrollment: "",
+    branch: "",
+    batch: "",
+    cgpa: "",
+  });
+  const [passwords, setPasswords] = useState({
+    oldPassword: "",
+    newPassword: "",
+    confirm: "",
+  });
   const [savingDetails, setSavingDetails] = useState(false);
-
-  const [passwords, setPasswords] = useState({ oldPassword: "", newPassword: "", confirm: "" });
   const [savingPassword, setSavingPassword] = useState(false);
-
   const [resume, setResume] = useState(null);
 
-  // Load the resume, then keep it live. The server pushes resume:updated to this
-  // user's own room, so an edit on another device lands here without a refresh.
+  const officer = isOfficer(user);
+  const student = isStudent(user);
+
+  // Load the resume, then keep it live. The server pushes resume:updated to
+  // this user's own room, so an edit on another device lands here.
   useEffect(() => {
-    if (user?.role !== "Student") return;
+    if (!student) return;
 
     let cancelled = false;
-    axios
-      .get("/api/v1/resume/me", { withCredentials: true })
-      .then((res) => {
-        if (!cancelled) setResume(res.data.resume);
-      })
+    api
+      .get("/api/v1/resume/me")
+      .then(({ data }) => !cancelled && setResume(data.resume))
       .catch(() => {});
 
     const socket = getSocket();
@@ -52,10 +63,9 @@ const Profile = () => {
       cancelled = true;
       socket.off("resume:updated", onResumeUpdated);
     };
-  }, [user?.role, user?._id]);
+  }, [student, user?._id]);
 
-  // Re-seed the form whenever the canonical user changes — including when a
-  // socket push arrives from this user's other device.
+  // Re-seed whenever the canonical user changes, including on a socket push.
   useEffect(() => {
     if (!user?._id) return;
     setDetails({
@@ -65,258 +75,242 @@ const Profile = () => {
       phone: user.phone != null ? String(user.phone) : "",
       address: user.address ?? "",
       enrollment: user.enrollment ?? "",
+      branch: user.branch ?? "",
+      batch: user.batch != null ? String(user.batch) : "",
+      cgpa: user.cgpa != null ? String(user.cgpa) : "",
     });
   }, [user]);
 
-  // Wait for the auth check before deciding. Redirecting on isAuthorized alone
-  // bounces a logged-in user to /login (and onward to /) whenever they load or
-  // refresh this URL directly, because it starts false.
-  if (!authChecked) {
-    return (
-      <section className="profile page">
-        <div className="container">
-          <p className="result_count">Loading your profile…</p>
-        </div>
-      </section>
-    );
-  }
-
-  if (!isAuthorized) {
-    return <Navigate to={"/login"} />;
-  }
-
-  const setField = (field) => (e) => {
-    setDetails((prev) => ({ ...prev, [field]: e.target.value }));
-    setErrors((prev) => ({ ...prev, [field]: undefined }));
-  };
-
-  // Mirrors the server-side schema so users see problems before a round trip.
-  const validateDetails = () => {
-    const next = {};
-
-    if (isTPO(user)) {
-      if (!details.firstname.trim()) next.firstname = "First name is required.";
-      if (!details.lastname.trim()) next.lastname = "Last name is required.";
-    } else {
-      const name = details.name.trim();
-      if (name.length < 3) next.name = "Name must be at least 3 characters.";
-      else if (name.length > 30) next.name = "Name cannot exceed 30 characters.";
-      if (!details.address.trim()) next.address = "Address is required.";
-    }
-
-    const phone = details.phone.trim();
-    if (!phone) next.phone = "Phone number is required.";
-    else if (!/^\d{6,15}$/.test(phone)) next.phone = "Enter a valid phone number (digits only).";
-
-    setErrors(next);
-    return Object.keys(next).length === 0;
-  };
+  const set = (key) => (e) => setDetails((d) => ({ ...d, [key]: e.target.value }));
 
   const saveDetails = async (e) => {
     e.preventDefault();
-    if (!validateDetails()) return;
+    setSavingDetails(true);
 
-    const endpoint = isTPO(user)
-      ? "/api/v1/tpo/update-profile"
-      : "/api/v1/user/update-profile";
-
-    const payload = isTPO(user)
+    const endpoint = officer ? "/api/v1/tpo/update-profile" : "/api/v1/user/update-profile";
+    const payload = officer
       ? {
-          firstname: details.firstname.trim(),
-          lastname: details.lastname.trim(),
-          phone: details.phone.trim(),
+          firstname: details.firstname,
+          lastname: details.lastname,
+          phone: details.phone,
         }
       : {
-          name: details.name.trim(),
-          phone: Number(details.phone.trim()),
-          address: details.address.trim(),
-          ...(user.role === "Student" ? { enrollment: details.enrollment.trim() } : {}),
+          name: details.name,
+          phone: details.phone,
+          address: details.address,
+          enrollment: details.enrollment,
+          ...(student && {
+            branch: details.branch || undefined,
+            batch: details.batch ? Number(details.batch) : undefined,
+            cgpa: details.cgpa ? Number(details.cgpa) : undefined,
+          }),
         };
 
     try {
-      setSavingDetails(true);
-      const res = await axios.put(endpoint, payload, { withCredentials: true });
-      // Render the server's saved record, never the local form state.
-      setUser(res.data.user);
-      toast.success(res.data.message || "Profile updated.");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Could not update profile.");
+      const { data } = await api.put(endpoint, payload);
+      if (data.user) setUser(data.user);
+      toast.success("Profile updated");
+    } catch (err) {
+      toast.error(apiError(err, "Could not save your profile."));
     } finally {
       setSavingDetails(false);
     }
   };
 
-  const changePassword = async (e) => {
+  const savePassword = async (e) => {
     e.preventDefault();
-
-    if (passwords.newPassword.length < 8) {
-      toast.error("New password must be at least 8 characters.");
-      return;
-    }
     if (passwords.newPassword !== passwords.confirm) {
-      toast.error("New passwords do not match.");
+      toast.error("New passwords don't match.");
+      return;
+    }
+    if (passwords.newPassword.length < 8) {
+      toast.error("Use at least 8 characters.");
       return;
     }
 
-    const endpoint = isTPO(user)
-      ? "/api/v1/tpo/update-password"
-      : "/api/v1/user/update-password";
+    setSavingPassword(true);
+    const endpoint = officer ? "/api/v1/tpo/update-password" : "/api/v1/user/update-password";
 
     try {
-      setSavingPassword(true);
-      const res = await axios.post(
-        endpoint,
-        { oldPassword: passwords.oldPassword, newPassword: passwords.newPassword },
-        { withCredentials: true }
-      );
-      toast.success(res.data.message || "Password updated.");
+      await api.post(endpoint, {
+        oldPassword: passwords.oldPassword,
+        newPassword: passwords.newPassword,
+      });
       setPasswords({ oldPassword: "", newPassword: "", confirm: "" });
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Could not update password.");
+      toast.success("Password updated");
+    } catch (err) {
+      toast.error(apiError(err, "Could not update your password."));
     } finally {
       setSavingPassword(false);
     }
   };
 
-  const memberSince = user?.createdAt
-    ? new Date(user.createdAt).toLocaleDateString("en-IN", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : null;
+  const tabs = [
+    ...(student ? [{ value: "resume", label: "Resume" }] : []),
+    { value: "details", label: "Profile" },
+    { value: "security", label: "Security" },
+  ];
 
   return (
-    <section className="profile page">
-      <div className="container">
-        <header className="profile_header">
-          <Avatar user={user} size={92} />
-          <div className="profile_identity">
-            <h2>{displayName(user) || "Your account"}</h2>
-            <p>{user?.email}</p>
-            <div className="badges">
-              {user?.role && <span className="badge role">{roleLabel(user.role)}</span>}
-              {user?.role === "TNP" && user?.status && (
-                <span className={`badge status ${String(user.status).toLowerCase()}`}>
+    <>
+      <PageHeader title="Your account" />
+
+      {/* Identity banner */}
+      <Card className="mb-6 bg-brand-gradient border-transparent text-white">
+        <div className="flex flex-wrap items-center gap-4">
+          <Avatar user={user} size={64} ring />
+          <div className="min-w-0">
+            <p className="text-xl font-bold tracking-tight">
+              {displayName(user) || "Your account"}
+            </p>
+            <p className="truncate text-sm text-white/70">{user?.email}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Badge tone="accent" size="sm">
+                {roleLabelLong(user?.role)}
+              </Badge>
+              {user?.status && (
+                <Badge
+                  size="sm"
+                  tone={
+                    user.status === "Approved"
+                      ? "success"
+                      : user.status === "Declined"
+                        ? "danger"
+                        : "warning"
+                  }
+                >
                   {user.status}
-                </span>
+                </Badge>
               )}
-              {memberSince && <span className="badge muted">Member since {memberSince}</span>}
             </div>
           </div>
-        </header>
-
-        <div className="profile_panels">
-          <form className="panel" onSubmit={saveDetails}>
-            <h3>Account Details</h3>
-
-            {isTPO(user) ? (
-              <>
-                <label>
-                  First Name
-                  <input type="text" value={details.firstname} onChange={setField("firstname")} />
-                  {errors.firstname && <small>{errors.firstname}</small>}
-                </label>
-                <label>
-                  Last Name
-                  <input type="text" value={details.lastname} onChange={setField("lastname")} />
-                  {errors.lastname && <small>{errors.lastname}</small>}
-                </label>
-              </>
-            ) : (
-              <label>
-                Full Name
-                <input type="text" value={details.name} onChange={setField("name")} />
-                {errors.name && <small>{errors.name}</small>}
-              </label>
-            )}
-
-            <label>
-              Email Address
-              <input type="email" value={user?.email ?? ""} disabled />
-              <small className="hint">
-                Email is your login identity and cannot be changed here.
-              </small>
-            </label>
-
-            {user?.role === "Student" && (
-              <label>
-                Enrollment Number
-                <input
-                  type="text"
-                  value={details.enrollment}
-                  onChange={setField("enrollment")}
-                  placeholder="e.g. 23BTRCN001"
-                />
-              </label>
-            )}
-
-            <label>
-              Phone Number
-              <input type="tel" value={details.phone} onChange={setField("phone")} />
-              {errors.phone && <small>{errors.phone}</small>}
-            </label>
-
-            {!isTPO(user) && (
-              <label>
-                Address
-                <input type="text" value={details.address} onChange={setField("address")} />
-                {errors.address && <small>{errors.address}</small>}
-              </label>
-            )}
-
-            <button type="submit" disabled={savingDetails}>
-              {savingDetails ? "Saving…" : "Save Changes"}
-            </button>
-          </form>
-
-          <form className="panel" onSubmit={changePassword}>
-            <h3>Change Password</h3>
-
-            <label>
-              Current Password
-              <input
-                type="password"
-                value={passwords.oldPassword}
-                onChange={(e) =>
-                  setPasswords((p) => ({ ...p, oldPassword: e.target.value }))
-                }
-                required
-              />
-            </label>
-            <label>
-              New Password
-              <input
-                type="password"
-                value={passwords.newPassword}
-                onChange={(e) =>
-                  setPasswords((p) => ({ ...p, newPassword: e.target.value }))
-                }
-                required
-              />
-              <small className="hint">At least 8 characters.</small>
-            </label>
-            <label>
-              Confirm New Password
-              <input
-                type="password"
-                value={passwords.confirm}
-                onChange={(e) => setPasswords((p) => ({ ...p, confirm: e.target.value }))}
-                required
-              />
-            </label>
-
-            <button type="submit" disabled={savingPassword}>
-              {savingPassword ? "Updating…" : "Update Password"}
-            </button>
-          </form>
         </div>
+      </Card>
 
-        {user?.role === "Student" && (
-          <ResumeSection resume={resume} setResume={setResume} />
-        )}
-      </div>
-    </section>
+      <Tabs
+        ariaLabel="Account sections"
+        value={tab}
+        onChange={setTab}
+        items={tabs}
+        className="mb-6"
+      />
+
+      {tab === "resume" && student && (
+        <ResumeSection resume={resume} onChange={setResume} />
+      )}
+
+      {tab === "details" && (
+        <Card className="max-w-2xl">
+          <CardHeader
+            title="Profile"
+            description="This is what recruiters see on your applications."
+          />
+          <form onSubmit={saveDetails} className="space-y-5">
+            {officer ? (
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Input
+                  label="First name"
+                  value={details.firstname}
+                  onChange={set("firstname")}
+                  leadingIcon={<FiUser className="size-4" />}
+                />
+                <Input label="Last name" value={details.lastname} onChange={set("lastname")} />
+              </div>
+            ) : (
+              <Input
+                label="Full name"
+                value={details.name}
+                onChange={set("name")}
+                leadingIcon={<FiUser className="size-4" />}
+              />
+            )}
+
+            <Input label="Email" value={user?.email ?? ""} disabled hint="Email cannot be changed." />
+
+            <Input label="Phone" type="tel" value={details.phone} onChange={set("phone")} />
+
+            {!officer && (
+              <Input label="Address" value={details.address} onChange={set("address")} />
+            )}
+
+            {student && (
+              <>
+                <Input
+                  label="Enrollment number"
+                  value={details.enrollment}
+                  onChange={set("enrollment")}
+                />
+                <div className="grid gap-5 sm:grid-cols-3">
+                  <Input label="Branch" value={details.branch} onChange={set("branch")} />
+                  <Input
+                    label="Graduating year"
+                    type="number"
+                    value={details.batch}
+                    onChange={set("batch")}
+                    placeholder="2027"
+                  />
+                  <Input
+                    label="CGPA"
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    max={10}
+                    value={details.cgpa}
+                    onChange={set("cgpa")}
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="flex justify-end">
+              <Button type="submit" loading={savingDetails}>
+                Save changes
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
+
+      {tab === "security" && (
+        <Card className="max-w-2xl">
+          <CardHeader title="Change password" description="Use at least 8 characters." />
+          <form onSubmit={savePassword} className="space-y-5">
+            <Input
+              label="Current password"
+              type="password"
+              required
+              autoComplete="current-password"
+              value={passwords.oldPassword}
+              onChange={(e) => setPasswords((p) => ({ ...p, oldPassword: e.target.value }))}
+              leadingIcon={<FiLock className="size-4" />}
+            />
+            <Input
+              label="New password"
+              type="password"
+              required
+              autoComplete="new-password"
+              value={passwords.newPassword}
+              onChange={(e) => setPasswords((p) => ({ ...p, newPassword: e.target.value }))}
+              leadingIcon={<FiLock className="size-4" />}
+            />
+            <Input
+              label="Confirm new password"
+              type="password"
+              required
+              autoComplete="new-password"
+              value={passwords.confirm}
+              onChange={(e) => setPasswords((p) => ({ ...p, confirm: e.target.value }))}
+              leadingIcon={<FiLock className="size-4" />}
+            />
+            <div className="flex justify-end">
+              <Button type="submit" loading={savingPassword}>
+                Update password
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
+    </>
   );
 };
 

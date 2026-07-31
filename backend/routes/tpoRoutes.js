@@ -1,7 +1,11 @@
 import express from "express";
 import { isAuthenticatedTPO } from "../middlewares/auth.js";
-import { forgotPasswordTPO, generateVerificationCodeTPO, getPendingTNPs, getTPO, handleTNPRequest, loginTPO, logoutTPO, registerTPO, updatePasswordTPO, updateProfileTPO, verifyUserTPO } from "../controllers/tpoController.js";
+import { forgotPasswordTPO, generateNewPasswordTPO, generateVerificationCodeTPO, getPendingTNPs, getTPO, handleTNPRequest, loginTPO, logoutTPO, registerTPO, updatePasswordTPO, updateProfileTPO, verifyUserTPO } from "../controllers/tpoController.js";
 import { authorizeRoles } from "../middlewares/tpoAuth.js";
+import {
+  getPlacementAnalytics,
+  getStudentDirectory,
+} from "../controllers/analyticsController.js";
 
 const router = express.Router();
 
@@ -25,7 +29,15 @@ router.get(
   getPendingTNPs
 );
 router.post("/forgot-password", forgotPasswordTPO);
-router.post("/generate-new-password", generateVerificationCodeTPO);
+// Was wired to generateVerificationCodeTPO — the password reset endpoint was
+// resending a code instead of setting the new password, so TPO reset silently
+// never worked.
+router.post("/generate-new-password", generateNewPasswordTPO);
+
+// ---- Placement reporting ----
+// The office previously had no reporting at all.
+router.get("/analytics", isAuthenticatedTPO, authorizeRoles("TPO"), getPlacementAnalytics);
+router.get("/students", isAuthenticatedTPO, authorizeRoles("TPO"), getStudentDirectory);
 // Was `router.post(("/update-password", ...))` — the extra parens collapsed the
 // three arguments into one via the comma operator, so this path was never
 // actually registered and every request to it 404'd.

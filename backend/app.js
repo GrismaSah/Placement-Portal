@@ -12,6 +12,7 @@ import jobRouter from "./routes/jobRoutes.js";
 import applicationRouter from "./routes/applicationRoutes.js";
 import tpoRouter from "./routes/tpoRoutes.js";
 import resumeRouter from "./routes/resumeRoutes.js";
+import notificationRouter from "./routes/notificationRoutes.js";
 
 
 const app = express();
@@ -20,7 +21,10 @@ config({ path: ".env" });
 app.use(
   cors({
     origin: [process.env.FRONTEND_URL],
-    method: ["GET", "POST", "DELETE", "PUT"],
+    // `methods`, not `method` — the misspelling meant this was silently
+    // ignored and cors fell back to its defaults, which exclude PATCH. The
+    // application status endpoint is a PATCH.
+    methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "Accept"],
   })
@@ -47,6 +51,7 @@ app.use("/api/v1/job", jobRouter);
 app.use("/api/v1/application", applicationRouter);
 app.use("/api/v1/tpo", tpoRouter);
 app.use("/api/v1/resume", resumeRouter);
+app.use("/api/v1/notification", notificationRouter);
 dbConnection();
 
 app.use(errorMiddleware);

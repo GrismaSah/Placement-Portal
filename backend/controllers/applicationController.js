@@ -10,6 +10,24 @@ import {
   deleteFile,
   uploadFromPath,
 } from "../utils/gridfs.js";
+import { notify, statusMessage } from "../utils/notify.js";
+
+/**
+ * Legal transitions for an application.
+ *
+ * Enforced server-side so a crafted request cannot jump a candidate straight
+ * from Applied to Placed, and so the history is always a coherent path. The
+ * two terminal states are reachable from anywhere live.
+ */
+const TRANSITIONS = {
+  Applied: ["Shortlisted", "Rejected", "Withdrawn"],
+  Shortlisted: ["Interview", "Rejected", "Withdrawn"],
+  Interview: ["Offered", "Rejected", "Withdrawn"],
+  Offered: ["Placed", "Rejected", "Withdrawn"],
+  Placed: [],
+  Rejected: [],
+  Withdrawn: [],
+};
 
 export const postApplication = catchAsyncErrors(async (req, res, next) => {
   const { role } = req.user;
@@ -118,11 +136,116 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
     TNPID,
     jobId,
     resume,
+    status: "Applied",
+    statusHistory: [{ status: "Applied", changedBy: req.user._id }],
+  });
+
+  // Tell the recruiter someone applied. Fire-and-forget: a notification
+  // failure must not fail the application the student just submitted.
+  notify({
+    user: jobDetails.postedBy,
+    type: "application:received",
+    title: "New application received",
+    body: `${name} applied for ${jobDetails.title}.`,
+    link: `/app/postings/${jobId}/applicants`,
   });
 
   res.status(200).json({
     success: true,
     message: "Application Submitted!",
+    application,
+  });
+});
+
+/**
+ * Move an application along the pipeline.
+ *
+ * The single most important addition to the backend: before this, an
+ * application had no status at all, so shortlisting, interviewing, offers and
+ * placements were untracked and a student had no way to know if anyone had
+ * even read their submission.
+ */
+export const updateApplicationStatus = catchAsyncErrors(async (req, res, next) => {
+  const { role, _id } = req.user;
+
+  if (role === "Student") {
+    return next(
+      new ErrorHandler("Only recruiters and the placement office can do this.", 403)
+    );
+  }
+
+  const { status, note, ctc } = req.body;
+
+  const application = await Application.findById(req.params.id).populate(
+    "jobId",
+    "title company postedBy"
+  );
+
+  if (!application) {
+    return next(new ErrorHandler("Application not found.", 404));
+  }
+
+  // Ownership: a recruiter may only act on applications to their own postings.
+  // The placement office may act on any.
+  if (role === "TNP" && String(application.jobId?.postedBy) !== String(_id)) {
+    return next(
+      new ErrorHandler("You can only update applications to your own postings.", 403)
+    );
+  }
+
+  const current = application.status || "Applied";
+  const allowed = TRANSITIONS[current] ?? [];
+
+  if (!allowed.includes(status)) {
+    return next(
+      new ErrorHandler(
+        allowed.length
+          ? `Cannot move an application from ${current} to ${status}. Allowed: ${allowed.join(", ")}.`
+          : `This application is ${current} and can no longer be changed.`,
+        400
+      )
+    );
+  }
+
+  application.status = status;
+  application.statusHistory.push({
+    status,
+    changedBy: _id,
+    changedAt: new Date(),
+    note,
+  });
+
+  if (status === "Offered") {
+    application.offer = {
+      ...(application.offer ?? {}),
+      ctc: ctc ? Number(ctc) : application.offer?.ctc,
+      role: application.jobId?.title,
+      offeredAt: new Date(),
+    };
+  }
+  if (status === "Placed") {
+    application.offer = { ...(application.offer ?? {}), acceptedAt: new Date() };
+  }
+
+  await application.save();
+
+  const message = statusMessage(
+    status,
+    application.jobId?.title ?? "a role",
+    application.jobId?.company
+  );
+
+  notify({
+    user: application.applicantID?.user,
+    type: "application:status",
+    title: message.title,
+    body: note ? `${message.body} — ${note}` : message.body,
+    link: "/app/applications",
+  });
+
+  res.status(200).json({
+    success: true,
+    message: `Application marked ${status}.`,
     application,
   });
 });
@@ -137,9 +260,31 @@ export const TNPGetAllApplications = catchAsyncErrors(
     }
     const { jobId } = req.query;
     const { _id } = req.user;
-    const applications = await Application.find({ jobId: jobId });
+
+    if (!jobId) {
+      // Without a jobId this used to return every application in the database.
+      return next(new ErrorHandler("A jobId is required.", 400));
+    }
+
+    const job = await Job.findById(jobId).select("postedBy title company");
+    if (!job) {
+      return next(new ErrorHandler("Job not found!", 404));
+    }
+
+    // Ownership: previously any authenticated recruiter could read the
+    // applicants — names, phone numbers, addresses and resumes — for any job
+    // in the system just by passing its id.
+    if (role === "TNP" && String(job.postedBy) !== String(_id)) {
+      return next(
+        new ErrorHandler("You can only view applicants for your own postings.", 403)
+      );
+    }
+
+    const applications = await Application.find({ jobId }).sort({ createdAt: -1 });
+
     res.status(200).json({
       success: true,
+      job,
       applications,
     });
   }

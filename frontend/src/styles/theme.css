@@ -1,0 +1,358 @@
+@import "tailwindcss";
+
+/* ===========================================================================
+   JAIN Placement Portal — design tokens
+   ---------------------------------------------------------------------------
+   Two layers, and the distinction matters:
+
+   1. @theme  — the RAW PALETTE. Fixed values that never change between light
+                and dark. Tailwind generates utilities from these
+                (bg-navy-900, text-gold-500, …).
+
+   2. :root   — SEMANTIC ROLES. What a color is *for*, not what it is. These
+                are the only tokens components are allowed to reference, which
+                is why dark mode below is ~40 lines instead of a rewrite.
+
+   Brand source: JGI Blue #111E42 + JGI Yellow #F6C100, per the university's
+   logo & graphic standards. Navy is the surface, gold is the single action
+   color — gold never becomes a background wash, only CTAs, active nav, focus
+   rings and key data. That restraint is what reads as institutional.
+   =========================================================================== */
+
+@theme {
+  /* ---- Typography ------------------------------------------------------ */
+  /* Arial/Helvetica are JAIN's specified typefaces. Inter is the same
+     grotesque skeleton with a far better screen rendering and a real
+     tabular-figure set, so it leads and Arial/Helvetica sit behind it. */
+  --font-sans: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ---- Brand palette --------------------------------------------------- */
+  --color-navy-50: #F2F4F9;
+  --color-navy-100: #E3E7F1;
+  --color-navy-200: #C4CCE1;
+  --color-navy-300: #97A5C6;
+  --color-navy-400: #6377A4;
+  --color-navy-500: #3E5286;
+  --color-navy-600: #2A3E75;
+  --color-navy-700: #1B2C5C;
+  --color-navy-800: #16244C;
+  --color-navy-900: #111E42; /* JGI Blue — the primary */
+  --color-navy-950: #0A1330;
+  --color-navy-990: #060C20;
+
+  --color-gold-50: #FFFBEB;
+  --color-gold-100: #FFF3C4;
+  --color-gold-200: #FFE685;
+  --color-gold-300: #FFD84D;
+  --color-gold-400: #FFCC1F;
+  --color-gold-500: #F6C100; /* JGI Yellow — the accent */
+  --color-gold-600: #D9A800;
+  --color-gold-700: #A87F00;
+  --color-gold-800: #7A5C00;
+
+  /* Supporting greys from the published brand palette. */
+  --color-ink: #1E1916;
+  --color-mute-500: #525579;
+  --color-mute-400: #7D7E9E;
+  --color-hairline: #E4E5E9;
+
+  /* ---- Application pipeline ------------------------------------------- */
+  /* One color per stage of the lifecycle introduced in Phase 4. These are
+     deliberately hue-distinct so a status board is scannable at a glance,
+     and every one of them clears 4.5:1 against its own tinted surface. */
+  --color-stage-applied: #525579;
+  --color-stage-shortlisted: #0B6BCB;
+  --color-stage-interview: #6941C6;
+  --color-stage-offered: #067A55;
+  --color-stage-placed: #B7791F;
+  --color-stage-rejected: #B42318;
+  --color-stage-withdrawn: #7D7E9E;
+
+  /* ---- Feedback -------------------------------------------------------- */
+  --color-success-500: #067A55;
+  --color-success-50: #ECFDF3;
+  --color-warning-500: #B54708;
+  --color-warning-50: #FFFAEB;
+  --color-danger-500: #B42318;
+  --color-danger-50: #FEF3F2;
+  --color-info-500: #0B6BCB;
+  --color-info-50: #EFF8FF;
+
+  /* ---- Radii ----------------------------------------------------------- */
+  --radius-field: 10px;
+  --radius-card: 14px;
+  --radius-panel: 20px;
+
+  /* ---- Motion ---------------------------------------------------------- */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+
+  /* ---- Fluid type scale ------------------------------------------------ */
+  /* Replaces the old fixed h1:4rem / p:20px, which overflowed every phone. */
+  --text-display: clamp(2.25rem, 1.5rem + 2.6vw, 3.5rem);
+  --text-display--line-height: 1.08;
+  --text-display--letter-spacing: -0.03em;
+  --text-h1: clamp(1.75rem, 1.35rem + 1.5vw, 2.5rem);
+  --text-h1--line-height: 1.16;
+  --text-h1--letter-spacing: -0.022em;
+  --text-h2: clamp(1.375rem, 1.15rem + 0.8vw, 1.875rem);
+  --text-h2--line-height: 1.24;
+  --text-h2--letter-spacing: -0.016em;
+  --text-h3: clamp(1.125rem, 1.02rem + 0.4vw, 1.375rem);
+  --text-h3--line-height: 1.34;
+  --text-h3--letter-spacing: -0.01em;
+}
+
+/* ===========================================================================
+   SEMANTIC ROLES — light
+   =========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces, back to front */
+  --surface-sunken: #F4F6FA;
+  --surface: #FFFFFF;
+  --surface-raised: #FFFFFF;
+  --surface-overlay: #FFFFFF;
+  --surface-inverse: var(--color-navy-900);
+  --surface-subtle: #F8FAFC;
+  --surface-hover: #F2F4F9;
+  --surface-active: #E3E7F1;
+
+  /* Text */
+  --text-primary: var(--color-navy-950);
+  --text-secondary: var(--color-mute-500);
+  --text-tertiary: var(--color-mute-400);
+  --text-inverse: #FFFFFF;
+  --text-on-brand: #FFFFFF;
+  --text-on-accent: var(--color-navy-950);
+
+  /* Lines */
+  --border: var(--color-hairline);
+  --border-strong: #CDD2DE;
+  --border-inverse: rgb(255 255 255 / 0.14);
+
+  /* Brand roles */
+  --brand: var(--color-navy-900);
+  --brand-hover: var(--color-navy-800);
+  --brand-active: var(--color-navy-950);
+  --brand-subtle: var(--color-navy-50);
+
+  --accent: var(--color-gold-500);
+  --accent-hover: var(--color-gold-400);
+  --accent-active: var(--color-gold-600);
+  --accent-subtle: var(--color-gold-50);
+
+  /* Focus — gold on navy, navy on light, always 2px + 2px offset */
+  --focus-ring: var(--color-navy-600);
+  --focus-ring-inverse: var(--color-gold-400);
+
+  /* Elevation. Tinted with the brand navy rather than neutral black, which is
+     what keeps stacked cards from looking grey and dead. */
+  --shadow-xs: 0 1px 2px rgb(17 30 66 / 0.06);
+  --shadow-sm: 0 1px 2px rgb(17 30 66 / 0.06), 0 2px 6px rgb(17 30 66 / 0.04);
+  --shadow-md: 0 2px 4px rgb(17 30 66 / 0.05), 0 8px 24px rgb(17 30 66 / 0.08);
+  --shadow-lg: 0 4px 8px rgb(17 30 66 / 0.05), 0 16px 40px rgb(17 30 66 / 0.12);
+  --shadow-accent: 0 4px 14px rgb(246 193 0 / 0.35);
+}
+
+/* ===========================================================================
+   SEMANTIC ROLES — dark
+   Only the role layer is redeclared. No component knows this block exists.
+   =========================================================================== */
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface-sunken: var(--color-navy-990);
+  --surface: var(--color-navy-950);
+  --surface-raised: #0F1A3A;
+  --surface-overlay: #142149;
+  --surface-inverse: #FFFFFF;
+  --surface-subtle: #0D1734;
+  --surface-hover: #16244C;
+  --surface-active: #1B2C5C;
+
+  --text-primary: #EEF1F8;
+  --text-secondary: #A5AFC9;
+  --text-tertiary: #7D87A3;
+  --text-inverse: var(--color-navy-950);
+  --text-on-brand: #FFFFFF;
+  --text-on-accent: var(--color-navy-950);
+
+  --border: rgb(255 255 255 / 0.10);
+  --border-strong: rgb(255 255 255 / 0.20);
+  --border-inverse: rgb(0 0 0 / 0.14);
+
+  /* On a navy page the navy brand can no longer carry a primary button, so
+     the roles shift up the ramp and stay distinguishable from the surface. */
+  --brand: #3A5290;
+  --brand-hover: #46609F;
+  --brand-active: #2A3E75;
+  --brand-subtle: rgb(58 82 144 / 0.16);
+
+  /* Full-saturation gold vibrates on dark; #E3B400 holds AA on navy-950. */
+  --accent: #E3B400;
+  --accent-hover: #F3C51A;
+  --accent-active: #C69C00;
+  --accent-subtle: rgb(227 180 0 / 0.14);
+
+  --focus-ring: var(--color-gold-400);
+  --focus-ring-inverse: var(--color-gold-400);
+
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 6px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 2px 4px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.45);
+  --shadow-lg: 0 4px 8px rgb(0 0 0 / 0.4), 0 16px 40px rgb(0 0 0 / 0.55);
+  --shadow-accent: 0 4px 14px rgb(227 180 0 / 0.25);
+}
+
+/* ===========================================================================
+   Base
+   =========================================================================== */
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--surface-sunken);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* NOTE: the old App.css put `overflow-x: hidden` on the universal
+       selector, which broke position:sticky and clipped every dropdown. It is
+       deliberately NOT reproduced here. */
+  }
+
+  /* One focus treatment for the whole app. Never remove it — recolor it. */
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Numbers in tables and stat tiles must not jitter as they change. */
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background-color: var(--accent);
+    color: var(--text-on-accent);
+  }
+}
+
+/* ===========================================================================
+   Utilities
+   =========================================================================== */
+
+@utility surface-card {
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Full-bleed navy used by the hero, sidebar and auth panel. The radial
+   highlight keeps a large navy field from reading as a flat block. */
+@utility bg-brand-gradient {
+  background-color: var(--color-navy-900);
+  background-image:
+    radial-gradient(90rem 40rem at 15% -10%, rgb(58 82 144 / 0.55), transparent 60%),
+    radial-gradient(60rem 30rem at 95% 0%, rgb(246 193 0 / 0.10), transparent 55%);
+}
+
+@utility text-balance-pretty {
+  text-wrap: pretty;
+}
+
+/* Screen-reader-only, but focusable — the skip link uses this. */
+@utility sr-only-focusable {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+
+  &:focus {
+    position: fixed;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+  }
+}
+
+/* ===========================================================================
+   Motion
+   =========================================================================== */
+
+@keyframes fade-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@utility animate-fade-rise {
+  animation: fade-rise var(--duration-slow) var(--ease-spring) both;
+}
+
+@utility animate-fade-in {
+  animation: fade-in var(--duration-base) var(--ease-out-quint) both;
+}
+
+@utility animate-scale-in {
+  animation: scale-in var(--duration-base) var(--ease-spring) both;
+}
+
+/* Global kill-switch. Every animation in the app is expected to be covered by
+   this — nothing gets its own bespoke reduced-motion handling. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

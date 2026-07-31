@@ -69,6 +69,60 @@ const applicationSchema = new mongoose.Schema({
     ref: "Job",
     required: true,
   },
-});
+
+  /**
+   * The application lifecycle.
+   *
+   * Until this existed an application had exactly two states — it was in the
+   * collection, or it had been deleted. A student who applied had no way to
+   * learn whether anyone had even opened it, and a recruiter had nowhere to
+   * record a decision.
+   *
+   * Applied → Shortlisted → Interview → Offered → Placed is the happy path;
+   * Rejected and Withdrawn are terminal and reachable from anywhere.
+   */
+  status: {
+    type: String,
+    enum: [
+      "Applied",
+      "Shortlisted",
+      "Interview",
+      "Offered",
+      "Placed",
+      "Rejected",
+      "Withdrawn",
+    ],
+    default: "Applied",
+    index: true,
+  },
+
+  // Append-only audit trail. Every transition is recorded with who made it, so
+  // "when was I shortlisted?" is answerable and decisions are attributable.
+  statusHistory: [
+    {
+      status: { type: String, required: true },
+      changedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      changedAt: { type: Date, default: Date.now },
+      note: { type: String, maxLength: 500 },
+      _id: false,
+    },
+  ],
+
+  offer: {
+    ctc: { type: Number },
+    role: { type: String },
+    offeredAt: { type: Date },
+    acceptedAt: { type: Date },
+  },
+}, { timestamps: true });
+
+// Duplicate prevention was a controller-level findOne, which two concurrent
+// submits could both pass. The database is the only place this can be enforced.
+applicationSchema.index({ "applicantID.user": 1, jobId: 1 }, { unique: true });
+
+// Recruiters list applicants for one job filtered by stage; students list
+// their own applications newest-first.
+applicationSchema.index({ jobId: 1, status: 1 });
+applicationSchema.index({ "applicantID.user": 1, createdAt: -1 });
 
 export const Application = mongoose.model("Application", applicationSchema);

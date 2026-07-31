@@ -1,41 +1,42 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { useEffect, useState } from "react";
+import { FiDownload } from "react-icons/fi";
+import { api } from "../../lib/api";
+import { Button, Modal, Skeleton } from "../ui";
 
 /**
  * Views a resume stored in GridFS.
  *
- * Fetches as a blob with credentials rather than pointing `src` straight at the
- * API: the endpoint is cookie-authenticated, and a bare `src` only happens to
- * work while the frontend and API share a site. It also lets one component
+ * Fetches as a blob with credentials rather than pointing `src` straight at
+ * the API: the endpoint is cookie-authenticated, and a bare `src` only happens
+ * to work while the frontend and API share a site. It also lets one component
  * render both PDFs and images off the response's content type.
  */
-const ResumeModal = ({ fileId, contentType, filename, onClose }) => {
+const ResumeModal = ({ open = true, fileId, contentType, filename, onClose }) => {
   const [blobUrl, setBlobUrl] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!fileId) return;
+    if (!fileId || !open) return;
     let revoked = false;
     let url = null;
 
-    axios
-      .get(`/api/v1/resume/file/${fileId}`, {
-        withCredentials: true,
-        responseType: "blob",
-      })
+    setBlobUrl(null);
+    setError(null);
+
+    api
+      .get(`/api/v1/resume/file/${fileId}`, { responseType: "blob" })
       .then((res) => {
         if (revoked) return;
         url = URL.createObjectURL(res.data);
         setBlobUrl(url);
       })
       .catch((err) => {
-        if (!revoked) {
-          setError(
-            err.response?.status === 403
-              ? "You are not authorised to view this resume."
-              : "Could not load this resume."
-          );
-        }
+        if (revoked) return;
+        setError(
+          err.response?.status === 403
+            ? "You are not authorised to view this resume."
+            : "Could not load this resume."
+        );
       });
 
     // Without revoking, every open leaks a blob for the lifetime of the page.
@@ -43,42 +44,66 @@ const ResumeModal = ({ fileId, contentType, filename, onClose }) => {
       revoked = true;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [fileId]);
+  }, [fileId, open]);
 
   const isPdf = (contentType || "").includes("pdf");
 
   return (
-    <div className="resume-modal" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <span className="close" onClick={onClose}>
-          &times;
-        </span>
-
-        {error && <p className="resume-error">{error}</p>}
-
-        {!error && !blobUrl && <p className="resume-loading">Loading resume…</p>}
-
-        {!error && blobUrl && isPdf && (
-          <object data={blobUrl} type="application/pdf" className="resume-pdf">
-            {/* Some browsers refuse to embed PDFs; always leave a way out. */}
-            <p>
-              This browser cannot display PDFs inline.{" "}
-              <a href={blobUrl} download={filename || "resume.pdf"}>
-                Download {filename || "resume.pdf"}
-              </a>
-            </p>
-          </object>
-        )}
-
-        {!error && blobUrl && !isPdf && <img src={blobUrl} alt="resume" />}
-
-        {blobUrl && (
-          <a className="resume-download" href={blobUrl} download={filename || "resume"}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="xl"
+      title={filename || "Resume"}
+      footer={
+        blobUrl && (
+          <Button
+            as="a"
+            href={blobUrl}
+            download={filename || "resume"}
+            variant="outline"
+            leadingIcon={<FiDownload />}
+          >
             Download
-          </a>
-        )}
-      </div>
-    </div>
+          </Button>
+        )
+      }
+    >
+      {error && (
+        <p className="rounded-[var(--radius-field)] bg-[var(--color-danger-50)] px-4 py-3 text-sm font-medium text-[var(--color-danger-500)]">
+          {error}
+        </p>
+      )}
+
+      {!error && !blobUrl && <Skeleton className="h-[65dvh] w-full" />}
+
+      {!error && blobUrl && isPdf && (
+        <object
+          data={blobUrl}
+          type="application/pdf"
+          className="h-[65dvh] w-full rounded-[var(--radius-field)] border border-[var(--border)]"
+        >
+          {/* Some browsers refuse to embed PDFs; always leave a way out. */}
+          <p className="p-4 text-sm text-[var(--text-secondary)]">
+            This browser cannot display PDFs inline.{" "}
+            <a
+              href={blobUrl}
+              download={filename || "resume.pdf"}
+              className="font-semibold text-[var(--brand)] hover:underline"
+            >
+              Download {filename || "resume.pdf"}
+            </a>
+          </p>
+        </object>
+      )}
+
+      {!error && blobUrl && !isPdf && (
+        <img
+          src={blobUrl}
+          alt={filename || "Resume"}
+          className="mx-auto max-h-[65dvh] rounded-[var(--radius-field)] border border-[var(--border)]"
+        />
+      )}
+    </Modal>
   );
 };
 

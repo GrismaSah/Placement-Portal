@@ -161,9 +161,10 @@ export const generateVerificationCode = catchAsyncErrors(
   }
 );
 
-  export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
-    const { email, verificationCode } = req.body;
-    const user = await User.findOne({ email });
+export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
+  const { email, verificationCode } = req.body;
+  const user = await User.findOne({ email });
+
   if (!user) {
     return next(new ErrorHandler("User not found.", 404));
   }
@@ -171,28 +172,59 @@ export const generateVerificationCode = catchAsyncErrors(
   if (!verificationCode) {
     return next(new ErrorHandler("Verification code is required.", 400));
   }
-    if (user.verificationCode === verificationCode) {
-      res.status(200).json({
-        success: true,
-        message: "Verification code is correct.",
-      });
-  }
-    
-  });
 
-export const generateNewPassword = catchAsyncErrors(async (req, res, next) => {
-  const { email, newPassword } = req.body;
-  const user = await User.findOne({ email });
-  if (!user) {
-      return next(new ErrorHandler("User not found.", 404));
+  // A wrong code used to fall off the end of the function without responding,
+  // so the request hung until the client gave up — and the UI's empty catch
+  // block let the user proceed to set a new password regardless.
+  if (user.verificationCode !== verificationCode) {
+    return next(new ErrorHandler("That verification code is not correct.", 400));
   }
-  user.password = newPassword;
-  await user.save();
-  sendToken(user, 201, res, "Password updated successfully.");
+
   res.status(200).json({
     success: true,
-    message: "Password updated successfully.",
+    message: "Verification code is correct.",
   });
+});
+
+export const generateNewPassword = catchAsyncErrors(async (req, res, next) => {
+  const { email, newPassword, verificationCode } = req.body;
+
+  /**
+   * SECURITY: this endpoint previously accepted { email, newPassword } and set
+   * the password with no code, no token and no session. Any unauthenticated
+   * caller who knew an email address could take over that account outright.
+   *
+   * The emailed code is the only proof of ownership this flow has, so it is
+   * required here rather than only on the preceding step — nothing obliged a
+   * caller to make that call at all.
+   */
+  if (!verificationCode) {
+    return next(new ErrorHandler("Verification code is required.", 400));
+  }
+
+  if (!newPassword || newPassword.length < 8) {
+    return next(
+      new ErrorHandler("Password must contain at least 8 characters.", 400)
+    );
+  }
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    return next(new ErrorHandler("User not found.", 404));
+  }
+
+  if (!user.verificationCode || user.verificationCode !== verificationCode) {
+    return next(new ErrorHandler("That verification code is not correct.", 400));
+  }
+
+  user.password = newPassword;
+  // Burn the code so the same one cannot be replayed.
+  user.verificationCode = null;
+  await user.save();
+
+  // sendToken sets the cookie and sends the body. The res.json that used to
+  // follow it threw ERR_HTTP_HEADERS_SENT on every successful reset.
+  sendToken(user, 200, res, "Password updated successfully.");
 });
 
 // update own profile

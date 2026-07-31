@@ -2,9 +2,8 @@ import { catchAsyncErrors } from "../middlewares/catchAsyncError.js";
 import { Job } from "../models/jobSchema.js";
 import ErrorHandler from "../middlewares/error.js";
 import { Application } from "../models/applicationSchema.js";
-import transporter from "../utils/email.config.js";
-import { NewJobPostedNotificationTemplate } from "../utils/NewJobPostedNotificationTemplate.js";
 import { User } from "../models/userSchema.js";
+import { notifyMany } from "../utils/notify.js";
 
 const DEFAULT_PAGE_SIZE = 12;
 const MAX_PAGE_SIZE = 48;
@@ -94,12 +93,27 @@ export const getJobStats = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const postJob = catchAsyncErrors(async (req, res, next) => {
-  const { role } = req.user;
+  const { role, status } = req.user;
   if (role === "Student") {
     return next(
       new ErrorHandler("Student not allowed to access this resource.", 400)
     );
   }
+
+  // The Pending/Approved/Declined gate was decorative: only the Student check
+  // above existed, so a recruiter who had never been approved — or had been
+  // explicitly declined — could post jobs to the whole student body.
+  if (role === "TNP" && status !== "Approved") {
+    return next(
+      new ErrorHandler(
+        status === "Declined"
+          ? "Your recruiter account was declined, so you cannot post roles."
+          : "Your recruiter account is awaiting approval from the Placement Office.",
+        403
+      )
+    );
+  }
+
   const {
     title,
     description,
@@ -110,6 +124,10 @@ export const postJob = catchAsyncErrors(async (req, res, next) => {
     fixedSalary,
     salaryFrom,
     salaryTo,
+    applicationDeadline,
+    driveDate,
+    openings,
+    eligibility,
   } = req.body;
 
   if (!title || !description || !category || !country || !city || !company) {
@@ -142,39 +160,40 @@ export const postJob = catchAsyncErrors(async (req, res, next) => {
     salaryFrom,
     salaryTo,
     postedBy,
+    applicationDeadline: applicationDeadline || undefined,
+    driveDate: driveDate || undefined,
+    openings: openings || undefined,
+    eligibility: eligibility || undefined,
   });
 
+  /**
+   * Notify students.
+   *
+   * This used to load every student and `await` a Gmail send for each one,
+   * sequentially, inside the request handler — so posting a job blocked for
+   * N x SMTP latency, one slow send stalled the response, and a mail failure
+   * surfaced to the recruiter as a failed job post. There was also no opt-out
+   * and no record of what had been sent.
+   *
+   * Now it writes notification rows in a single insertMany and pushes them
+   * over the sockets that are already open. Not awaited: the recruiter's
+   * response does not depend on the fan-out succeeding.
+   */
+  User.find({ role: "Student" }, "_id")
+    .lean()
+    .then((students) =>
+      notifyMany(
+        students.map((s) => s._id),
+        {
+          type: "job:new",
+          title: `New opening: ${job.title}`,
+          body: `${job.company} is hiring in ${job.city}. Applications are open now.`,
+          link: `/app/jobs/${job._id}`,
+        }
+      )
+    )
+    .catch((error) => console.error("Job notification fan-out failed:", error.message));
 
-  
-  
-    
-  const students = await User.find({ role: "Student" }, "email name"); // Correct query method
-  if (!students || students.length === 0) {
-    console.log("No students found to notify.");
-  } else {
-    console.log(".env email", process.env.NODEMAIL_EMAIL);
-    
-    for (const student of students) {
-      const mailOptions = {
-        from: `"NITA-PLACEMENT-CELL" <${process.env.NODEMAIL_EMAIL}>`,
-        to: student.email,
-        subject: "New Job Posted",
-        html: NewJobPostedNotificationTemplate(job, student.name), // Ensure 'job' is passed correctly
-      };
-      
-      try {
-        await transporter.sendMail(mailOptions);
-        // console.log(`Notification sent to ${student.email}`);
-      } catch (error) {
-        console.error(`Error sending email to ${student.email}:`, error.message);
-      }
-    }
-  }
-  
-    
-  
-  
-  
   res.status(200).json({
     success: true,
     message: "Job Posted Successfully!",
@@ -226,14 +245,27 @@ export const updateJob = catchAsyncErrors(async (req, res, next) => {
   if (!job) {
     return next(new ErrorHandler("OOPS! Job not found.", 404));
   }
-  job = await Job.findByIdAndUpdate(id, req.body, {
+
+  // Ownership: any authenticated recruiter could previously edit any job in
+  // the system — including changing another company's salary or description —
+  // simply by knowing its id.
+  if (role === "TNP" && String(job.postedBy) !== String(req.user._id)) {
+    return next(new ErrorHandler("You can only edit your own postings.", 403));
+  }
+
+  // `postedBy` is never client-settable: accepting it here would let a
+  // recruiter reassign someone else's posting to themselves.
+  const { postedBy, _id, ...updates } = req.body;
+
+  job = await Job.findByIdAndUpdate(id, updates, {
     new: true,
     runValidators: true,
-    useFindAndModify: false,
   });
+
   res.status(200).json({
     success: true,
     message: "Job Updated!",
+    job,
   });
 });
 
@@ -249,6 +281,25 @@ export const deleteJob = catchAsyncErrors(async (req, res, next) => {
   if (!job) {
     return next(new ErrorHandler("OOPS! Job not found.", 404));
   }
+
+  // Ownership: without this any recruiter could delete any posting.
+  if (role === "TNP" && String(job.postedBy) !== String(req.user._id)) {
+    return next(new ErrorHandler("You can only delete your own postings.", 403));
+  }
+
+  // Deleting a job used to orphan its applications and leave their resume
+  // bytes in GridFS forever. Refuse instead — a posting with applicants is a
+  // record students are relying on. Closing it is the correct action.
+  const applicationCount = await Application.countDocuments({ jobId: id });
+  if (applicationCount > 0) {
+    return next(
+      new ErrorHandler(
+        `This posting has ${applicationCount} application(s) and cannot be deleted. Close it instead.`,
+        400
+      )
+    );
+  }
+
   await job.deleteOne();
   res.status(200).json({
     success: true,

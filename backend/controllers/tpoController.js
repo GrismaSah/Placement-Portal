@@ -7,6 +7,7 @@ import { sendVerificationCode } from "../utils/verifyEmail/email.js";
 import { sentRegisteredEmail } from "../utils/registeredUser/register.js";
 import { sendTnpStatusEmailApproved, sendTnpStatusEmailDeclined } from "../utils/sendTnpStatusEmail.js";
 import { emitProfileUpdate } from "../socket.js";
+import { notify } from "../utils/notify.js";
 
 export const registerTPO = catchAsyncErrors(async (req, res, next) => {
     const { firstname, lastname, email, phone, password } = req.body;
@@ -99,28 +100,44 @@ export const handleTNPRequest = catchAsyncErrors(async (req, res, next) => {
     }
   
   user.status = action;
-  
-    await user.save();
-  
-  if (action === "Approved") {
-    sendTnpStatusEmailApproved(user)
-      res.status(200).json({ success: true, message: "TNP registration approved!" });
+
+  await user.save();
+
+  const approved = action === "Approved";
+
+  // In-app notification alongside the email — the recruiter sees the decision
+  // the moment they next open the portal, whether or not SMTP is configured.
+  notify({
+    user: user._id,
+    type: approved ? "recruiter:approved" : "recruiter:declined",
+    title: approved
+      ? "Your recruiter account is approved"
+      : "About your recruiter account",
+    body: approved
+      ? "You can now post openings and review applicants."
+      : "The Placement Office was unable to approve your account at this time.",
+    link: "/app/dashboard",
+  });
+
+  if (approved) {
+    sendTnpStatusEmailApproved(user);
+    res.status(200).json({ success: true, message: "Recruiter approved." });
   } else {
     sendTnpStatusEmailDeclined(user);
-      res.status(200).json({ success: true, message: "TNP registration declined. Functionality hidden." });
-    }
-  });
+    res.status(200).json({ success: true, message: "Recruiter declined." });
+  }
+});
   
 
   export const getPendingTNPs = catchAsyncErrors(async (req, res, next) => {
-    
-    const pendingTNPs = await User.find({ role: "TNP", status: "Pending" });
-  
-    if (!pendingTNPs || pendingTNPs.length === 0) {
-      return next(new ErrorHandler("No pending TNPs found!", 404));
-    }
-  
-   
+    const pendingTNPs = await User.find({ role: "TNP", status: "Pending" })
+      .select("-password -verificationCode")
+      .sort({ createdAt: -1 });
+
+    // An empty queue is the normal, desirable state — not an error. This used
+    // to return 404 when there was nothing to review, which forced the client
+    // to discover "all clear" through its error handler and made an empty
+    // state indistinguishable from a genuine failure.
     res.status(200).json({
       success: true,
       count: pendingTNPs.length,
@@ -228,35 +245,66 @@ export const generateVerificationCodeTPO = catchAsyncErrors(
 export const forgotPasswordTPO = catchAsyncErrors(async (req, res, next) => {
   const { email, verificationCode } = req.body;
   const user = await TPO.findOne({ email });
-if (!user) {
-  return next(new ErrorHandler("User not found.", 404));
-}
 
-if (!verificationCode) {
-  return next(new ErrorHandler("Verification code is required.", 400));
-}
-  if (user.verificationCode === verificationCode) {
-    res.status(200).json({
-      success: true,
-      message: "Verification code is correct.",
-    });
-}
-  
+  if (!user) {
+    return next(new ErrorHandler("User not found.", 404));
+  }
+
+  if (!verificationCode) {
+    return next(new ErrorHandler("Verification code is required.", 400));
+  }
+
+  // A wrong code used to fall off the end of the function without ever
+  // responding, so the request hung until the client timed out — and the UI,
+  // whose catch block was empty, advanced to the next step anyway.
+  if (user.verificationCode !== verificationCode) {
+    return next(new ErrorHandler("That verification code is not correct.", 400));
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Verification code is correct.",
+  });
 });
 
 export const generateNewPasswordTPO = catchAsyncErrors(async (req, res, next) => {
-const { email, newPassword } = req.body;
-const user = await TPO.findOne({ email });
-if (!user) {
+  const { email, newPassword, verificationCode } = req.body;
+
+  /**
+   * SECURITY: this endpoint previously accepted { email, newPassword } and set
+   * the password with no code, no token and no session — meaning anyone who
+   * knew an address could take over that account. The emailed code is the only
+   * proof of ownership in this flow, so it is now required here too. Checking
+   * it on the previous step alone was worthless: nothing forced a caller to
+   * make that call first.
+   */
+  if (!verificationCode) {
+    return next(new ErrorHandler("Verification code is required.", 400));
+  }
+
+  if (!newPassword || newPassword.length < 8) {
+    return next(
+      new ErrorHandler("Password must contain at least 8 characters.", 400)
+    );
+  }
+
+  const user = await TPO.findOne({ email });
+  if (!user) {
     return next(new ErrorHandler("User not found.", 404));
-}
-user.password = newPassword;
-await user.save();
-sendToken(user, 201, res, "Password updated successfully.");
-res.status(200).json({
-  success: true,
-  message: "Password updated successfully.",
-});
+  }
+
+  if (!user.verificationCode || user.verificationCode !== verificationCode) {
+    return next(new ErrorHandler("That verification code is not correct.", 400));
+  }
+
+  user.password = newPassword;
+  // Burn the code so it cannot be replayed to reset the password again.
+  user.verificationCode = null;
+  await user.save();
+
+  // sendToken already writes the cookie and sends a JSON body; the second
+  // res.json that used to follow it threw ERR_HTTP_HEADERS_SENT every time.
+  sendToken(user, 200, res, "Password updated successfully.");
 });
 
 export const updatePasswordTPO = catchAsyncErrors(async (req, res, next) => {

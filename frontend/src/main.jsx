@@ -1,6 +1,13 @@
 import React, { createContext, useState } from "react";
 import ReactDOM from "react-dom/client";
+
+// Design tokens first, legacy App.css second (App.jsx imports it). Until the
+// last screen is migrated in Phase 9 the two stylesheets coexist, and the
+// later import has to win on the rules they both define.
+import "./styles/theme.css";
+
 import App from "./App.jsx";
+import { ThemeProvider } from "./lib/useTheme.jsx";
 
 export const Context = createContext({
   isAuthorized: false,
@@ -25,7 +32,9 @@ const AppWrapper = () => {
         setAuthChecked,
       }}
     >
-      <App />
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
     </Context.Provider>
   );
 };

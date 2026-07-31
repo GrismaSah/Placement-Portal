@@ -1,0 +1,104 @@
+/**
+ * Role vocabulary and navigation.
+ *
+ * The three roles are named confusingly in the data model and it leaks into
+ * the UI, so every human-facing label is produced here rather than inline:
+ *
+ *   Student — applies to roles
+ *   TNP     — "Training & Placement" coordinator, but functionally the
+ *             RECRUITER: posts jobs and reviews applicants
+ *   TPO     — Training & Placement Officer: the university administrator who
+ *             approves recruiters and owns placement reporting
+ */
+
+import {
+  FiBarChart2,
+  FiBriefcase,
+  FiCheckSquare,
+  FiFileText,
+  FiGrid,
+  FiPlus,
+  FiSearch,
+  FiUser,
+  FiUserCheck,
+  FiUsers,
+} from "react-icons/fi";
+
+export const ROLES = {
+  STUDENT: "Student",
+  RECRUITER: "TNP",
+  OFFICER: "TPO",
+};
+
+export const roleLabel = (role) =>
+  ({
+    Student: "Student",
+    TNP: "Recruiter",
+    TPO: "Placement Officer",
+  })[role] ?? role ?? "";
+
+/** The longer form, used where the acronym still needs explaining. */
+export const roleLabelLong = (role) =>
+  ({
+    Student: "Student",
+    TNP: "Recruiter (TNP)",
+    TPO: "Placement Officer (TPO)",
+  })[role] ?? role ?? "";
+
+export const isStudent = (user) => user?.role === ROLES.STUDENT;
+export const isRecruiter = (user) => user?.role === ROLES.RECRUITER;
+export const isOfficer = (user) => user?.role === ROLES.OFFICER;
+
+/**
+ * Sidebar navigation per role.
+ * `end` marks routes that must match exactly, so /app/jobs does not stay
+ * highlighted while you are on /app/jobs/:id.
+ */
+export const navFor = (role) => {
+  const common = [
+    { to: "/app/dashboard", label: "Dashboard", icon: FiGrid, end: true },
+    { to: "/app/jobs", label: "Openings", icon: FiSearch },
+  ];
+
+  if (role === ROLES.STUDENT) {
+    return [
+      ...common,
+      { to: "/app/applications", label: "My applications", icon: FiFileText },
+      { to: "/app/resume", label: "Resume", icon: FiUser },
+    ];
+  }
+
+  if (role === ROLES.RECRUITER) {
+    // Applicants are reached per-posting rather than as a flat list — the
+    // backend scopes /application/TNP/getall to a single jobId, which is what
+    // makes the ownership check possible.
+    return [
+      ...common,
+      { to: "/app/postings", label: "My postings", icon: FiBriefcase },
+      { to: "/app/postings/new", label: "Post a role", icon: FiPlus },
+    ];
+  }
+
+  if (role === ROLES.OFFICER) {
+    return [
+      { to: "/app/dashboard", label: "Dashboard", icon: FiGrid, end: true },
+      { to: "/app/analytics", label: "Analytics", icon: FiBarChart2 },
+      { to: "/app/approvals", label: "Recruiter approvals", icon: FiUserCheck },
+      { to: "/app/students", label: "Students", icon: FiUsers },
+      { to: "/app/jobs", label: "Openings", icon: FiSearch },
+    ];
+  }
+
+  return common;
+};
+
+/** Up to four items for the mobile bottom bar — more than that is unusable. */
+export const mobileNavFor = (role) => navFor(role).slice(0, 4);
+
+export const homeFor = () => "/app/dashboard";
+
+export const ROLE_ICONS = {
+  Student: FiUser,
+  TNP: FiBriefcase,
+  TPO: FiCheckSquare,
+};

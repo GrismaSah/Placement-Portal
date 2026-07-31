@@ -1,75 +1,28 @@
-export const DeclineTnpRequestTemplate = (tnpName) => {
-    return `
-      <html>
-        <body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4;">
-          <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border: 1px solid #dddddd; padding: 20px;">
-            <tr>
-              <td align="center" style="padding: 10px 0;">
-                <h1 style="color: #d9534f;">NITA Placement Cell</h1>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <p style="font-size: 16px; line-height: 1.5; color: #333;">
-                  Dear ${tnpName},
-                </p>
-                <p style="font-size: 16px; line-height: 1.5; color: #333;">
-                  We regret to inform you that your recent request to the Training and Placement Office has been declined. Please reach out to us for further assistance.
-                </p>
-                <p style="font-size: 16px; line-height: 1.5; color: #333;">
-                  If you have any questions or require further clarification, feel free to contact the TPO.
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <p style="font-size: 16px; line-height: 1.5; color: #666;">
-                  Best regards,<br>
-                  NITA Training and Placement Office
-                </p>
-              </td>
-            </tr>
-          </table>
-        </body>
-      </html>
-    `;
-  };
+import { BRANDING, emailLayout } from "../../config/branding.js";
 
-  
+/**
+ * Recruiter approval / decline notices.
+ *
+ * Both now render through the shared JAIN layout. Each template previously
+ * carried its own colour scheme (#5cb85c, #d9534f) and signed off as a
+ * different institution's placement cell.
+ */
 
-  export const ApprovalTnpRequestTemplate = (tnpName) => {
-    return `
-      <html>
-        <body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4;">
-          <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border: 1px solid #dddddd; padding: 20px;">
-            <tr>
-              <td align="center" style="padding: 10px 0;">
-                <h1 style="color: #5cb85c;">NITA Placement Cell</h1>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <p style="font-size: 16px; line-height: 1.5; color: #333;">
-                  Dear ${tnpName},
-                </p>
-                <p style="font-size: 16px; line-height: 1.5; color: #333;">
-                  We are pleased to inform you that your recent request to the Training and Placement Office has been approved. You may now proceed with the necessary steps.
-                </p>
-                <p style="font-size: 16px; line-height: 1.5; color: #333;">
-                  If you have any questions or need further assistance, feel free to contact the TPO.
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <p style="font-size: 16px; line-height: 1.5; color: #666;">
-                  Best regards,<br>
-                  NITA Training and Placement Office
-                </p>
-              </td>
-            </tr>
-          </table>
-        </body>
-      </html>
-    `;
-  };  
+export const ApprovalTnpRequestTemplate = (tnpName) =>
+  emailLayout({
+    heading: "Your recruiter account is approved",
+    intro: `Dear ${tnpName}, the ${BRANDING.office} has approved your recruiter account. You can now post openings and review applicants.`,
+    bodyHtml: `<ul style="margin:0;padding-left:20px;font-size:15px;line-height:26px;color:${BRANDING.colors.muted};">
+      <li>Post a role with eligibility criteria and a closing date</li>
+      <li>Review applicants and open their resumes inline</li>
+      <li>Move candidates through shortlisting, interview and offer</li>
+    </ul>`,
+    cta: { label: "Go to the portal", url: `${BRANDING.portalUrl}/app/dashboard` },
+  });
+
+export const DeclineTnpRequestTemplate = (tnpName) =>
+  emailLayout({
+    heading: "About your recruiter account",
+    intro: `Dear ${tnpName}, after review the ${BRANDING.office} is not able to approve your recruiter account at this time.`,
+    footNote: `If you believe this was in error, or would like to provide further details about your organisation, reply to this email or contact us at ${BRANDING.supportEmail}.`,
+  });

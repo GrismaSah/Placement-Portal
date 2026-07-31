@@ -58,7 +58,60 @@ const jobSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
+
+  /**
+   * Drive details.
+   *
+   * A job *is* the drive in this data model, but it previously carried no
+   * dates and no criteria — so students had no deadline to work to and
+   * recruiters received applications from anyone regardless of eligibility.
+   */
+  applicationDeadline: { type: Date },
+  driveDate: { type: Date },
+
+  eligibility: {
+    minCgpa: { type: Number, min: 0, max: 10 },
+    maxBacklogs: { type: Number, min: 0 },
+    allowedBranches: [{ type: String }],
+    allowedBatches: [{ type: Number }],
+  },
+
+  openings: { type: Number, min: 1 },
 });
+
+/** True once the deadline has passed or the posting has been closed. */
+jobSchema.methods.isOpen = function () {
+  if (this.expired) return false;
+  if (this.applicationDeadline && this.applicationDeadline < new Date()) return false;
+  return true;
+};
+
+/**
+ * Whether a given student meets the posted criteria.
+ * Absent criteria mean "no restriction" — a job with no eligibility block is
+ * open to everyone, which is how every pre-existing job behaves.
+ */
+jobSchema.methods.studentIsEligible = function (user) {
+  const e = this.eligibility;
+  if (!e) return { eligible: true, reasons: [] };
+
+  const reasons = [];
+
+  if (e.minCgpa != null && (user?.cgpa ?? 0) < e.minCgpa) {
+    reasons.push(`Requires a CGPA of ${e.minCgpa} or above.`);
+  }
+  if (e.maxBacklogs != null && (user?.backlogs ?? 0) > e.maxBacklogs) {
+    reasons.push(`Allows at most ${e.maxBacklogs} active backlog(s).`);
+  }
+  if (e.allowedBranches?.length && !e.allowedBranches.includes(user?.branch)) {
+    reasons.push(`Open to ${e.allowedBranches.join(", ")} only.`);
+  }
+  if (e.allowedBatches?.length && !e.allowedBatches.includes(user?.batch)) {
+    reasons.push(`Open to the ${e.allowedBatches.join(", ")} batch only.`);
+  }
+
+  return { eligible: reasons.length === 0, reasons };
+};
 
 
 // Every listing query filters on `expired` first, so it leads each compound index.

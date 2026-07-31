@@ -1,128 +1,293 @@
-import React, { useContext, useEffect, useState } from "react";
-import { Context } from "../../main";
-import axios from "axios";
+import { useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { useNavigate, useParams } from "react-router-dom";
+import { FiCheck, FiEye, FiUsers, FiX } from "react-icons/fi";
+import { api, apiError } from "../../lib/api";
+import { invalidate, useQuery } from "../../lib/useQuery";
+import PageHeader from "../Layout/PageHeader";
+import {
+  APPLICATION_STAGES,
+  Avatar,
+  Button,
+  Card,
+  EmptyState,
+  Modal,
+  Skeleton,
+  StatusBadge,
+  Table,
+  Tabs,
+  Textarea,
+} from "../ui";
 import ResumeModal from "./ResumeModal";
 
+/**
+ * Applicants for one posting.
+ *
+ * The recruiter's working surface. Previously this listed names with a resume
+ * link and nothing else — there was no way to record a decision, because
+ * applications had no status field. Now every row can be advanced through the
+ * pipeline, and the student is notified on each transition.
+ */
+
+/** What a recruiter may move an application to from where it is now. */
+const NEXT_STAGE = {
+  Applied: "Shortlisted",
+  Shortlisted: "Interview",
+  Interview: "Offered",
+  Offered: "Placed",
+};
+
 const JobApplications = () => {
-  const [applications, setApplications] = useState([]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [activeResume, setActiveResume] = useState(null);
-
-  const { isAuthorized, user } = useContext(Context);
-  const navigateTo = useNavigate();
-
   const { jobId } = useParams();
-  console.log(jobId);
+  const { data, isInitialLoading, refetch } = useQuery(
+    "/api/v1/application/TNP/getall",
+    { params: { jobId } }
+  );
 
-  useEffect(() => {
-    try {
-      axios
-        .get(
-          "http://localhost:4000/api/v1/application/TNP/getall?jobId=" + jobId,
-          {
-            withCredentials: true,
-          }
-        )
-        .then((res) => {
-          console.log("response", res);
+  const [tab, setTab] = useState("all");
+  const [resume, setResume] = useState(null);
+  const [action, setAction] = useState(null); // { app, status }
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
 
-          setApplications(res.data.applications);
-        });
-    } catch (error) {
-      toast.error(error.response.data.message);
+  const applications = data?.applications ?? [];
+  const job = data?.job;
+
+  const counts = useMemo(() => {
+    const by = {};
+    for (const a of applications) {
+      const s = a.status ?? "Applied";
+      by[s] = (by[s] ?? 0) + 1;
     }
-  }, [isAuthorized]);
+    return by;
+  }, [applications]);
 
-  if (!isAuthorized) {
-    navigateTo("/");
+  const shown =
+    tab === "all"
+      ? applications
+      : applications.filter((a) => (a.status ?? "Applied") === tab);
+
+  const move = async () => {
+    if (!action) return;
+    setBusy(true);
+    try {
+      await api.patch(`/api/v1/application/${action.app._id}/status`, {
+        status: action.status,
+        note: note.trim() || undefined,
+      });
+      invalidate("/api/v1/application");
+      toast.success(`Marked ${action.status.toLowerCase()}`);
+      setAction(null);
+      setNote("");
+      refetch();
+    } catch (err) {
+      toast.error(apiError(err, "Could not update the application."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (isInitialLoading) {
+    return (
+      <>
+        <PageHeader title="Applicants" />
+        <Skeleton className="h-96" rounded="rounded-[var(--radius-card)]" />
+      </>
+    );
   }
 
-  const openModal = (resume) => {
-    setActiveResume(resume);
-    setModalOpen(true);
-  };
+  const columns = [
+    {
+      key: "name",
+      header: "Applicant",
+      render: (a) => (
+        <span className="flex items-center gap-2.5">
+          <Avatar user={a} size={32} />
+          <span className="min-w-0">
+            <span className="block truncate font-medium text-[var(--text-primary)]">
+              {a.name}
+            </span>
+            <span className="block truncate text-xs text-[var(--text-tertiary)]">
+              {a.email}
+            </span>
+          </span>
+        </span>
+      ),
+    },
+    { key: "enrollment", header: "Enrollment", hideOnMobile: true },
+    { key: "phone", header: "Phone", hideOnMobile: true },
+    {
+      key: "status",
+      header: "Stage",
+      render: (a) => <StatusBadge status={a.status ?? "Applied"} size="sm" />,
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      align: "right",
+      render: (a) => {
+        const status = a.status ?? "Applied";
+        const next = NEXT_STAGE[status];
 
-  const closeModal = () => {
-    setModalOpen(false);
-  };
+        return (
+          <span className="flex flex-wrap items-center justify-end gap-1.5">
+            {a.resume?.fileId && (
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label={`View ${a.name}'s resume`}
+                onClick={() => setResume(a.resume)}
+                leadingIcon={<FiEye />}
+              >
+                Resume
+              </Button>
+            )}
+            {next && (
+              <Button
+                size="sm"
+                variant="outline"
+                leadingIcon={<FiCheck />}
+                onClick={() => setAction({ app: a, status: next })}
+              >
+                {next}
+              </Button>
+            )}
+            {next && (
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label={`Reject ${a.name}`}
+                className="text-[var(--color-danger-500)] hover:bg-[var(--color-danger-50)]"
+                onClick={() => setAction({ app: a, status: "Rejected" })}
+              >
+                <FiX className="size-4" />
+              </Button>
+            )}
+          </span>
+        );
+      },
+    },
+  ];
 
   return (
-    <section className="my_applications page">
-      <div className="container">
-        <h1>Applications From Students</h1>
-        {applications.length <= 0 ? (
-          <>
-            <h4>No Applications Found</h4>
-          </>
-        ) : (
-          applications.map((element) => {
-            return (
-              <TNPCard
-                element={element}
-                key={element._id}
-                openModal={openModal}
-              />
-            );
-          })
-        )}
-      </div>
+    <>
+      <PageHeader
+        breadcrumbs={[
+          { label: "My postings", to: "/app/postings" },
+          { label: job?.title ?? "Applicants" },
+        ]}
+        title={job?.title ? `Applicants — ${job.title}` : "Applicants"}
+        description={
+          applications.length
+            ? `${applications.length} ${applications.length === 1 ? "person has" : "people have"} applied.`
+            : undefined
+        }
+      />
 
-      {modalOpen && activeResume && (
+      {applications.length === 0 ? (
+        <Card padded={false}>
+          <EmptyState
+            icon={<FiUsers />}
+            title="No applications yet"
+            description="Applicants appear here as soon as students apply to this posting."
+            action="Back to my postings"
+            actionTo="/app/postings"
+          />
+        </Card>
+      ) : (
+        <>
+          <Tabs
+            ariaLabel="Filter by stage"
+            variant="pill"
+            value={tab}
+            onChange={setTab}
+            items={[
+              { value: "all", label: "All", count: applications.length },
+              ...APPLICATION_STAGES.filter((s) => counts[s.value]).map((s) => ({
+                value: s.value,
+                label: s.label,
+                count: counts[s.value],
+              })),
+              ...(counts.Rejected
+                ? [{ value: "Rejected", label: "Not selected", count: counts.Rejected }]
+                : []),
+            ]}
+            className="mb-6"
+          />
+
+          <Card padded={false} className="overflow-hidden">
+            <Table
+              caption={`Applicants for ${job?.title ?? "this posting"}`}
+              columns={columns}
+              rows={shown}
+              empty={
+                <EmptyState
+                  icon={<FiUsers />}
+                  title="Nobody at this stage"
+                  description="Move applicants through the pipeline and they'll appear here."
+                />
+              }
+            />
+          </Card>
+        </>
+      )}
+
+      {resume && (
         <ResumeModal
-          fileId={activeResume.fileId}
-          contentType={activeResume.contentType}
-          filename={activeResume.filename}
-          onClose={closeModal}
+          open
+          fileId={resume.fileId}
+          contentType={resume.contentType}
+          filename={resume.filename}
+          onClose={() => setResume(null)}
         />
       )}
-    </section>
+
+      <Modal
+        open={Boolean(action)}
+        onClose={() => {
+          setAction(null);
+          setNote("");
+        }}
+        size="sm"
+        title={
+          action?.status === "Rejected"
+            ? "Reject this applicant?"
+            : `Move to ${action?.status ?? ""}?`
+        }
+        description={`${action?.app?.name ?? "The applicant"} will be notified.`}
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setAction(null);
+                setNote("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant={action?.status === "Rejected" ? "danger" : "primary"}
+              loading={busy}
+              onClick={move}
+            >
+              Confirm
+            </Button>
+          </>
+        }
+      >
+        <Textarea
+          label="Note (optional)"
+          rows={3}
+          maxLength={500}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Interview scheduled for Tuesday at 10am…"
+          hint="Included in the notification the student receives."
+        />
+      </Modal>
+    </>
   );
 };
 
 export default JobApplications;
-
-const TNPCard = ({ element, openModal }) => {
-  return (
-    <>
-      <div className="job_seeker_card">
-        <div className="detail">
-          <p>
-            <span>Name:</span> {element.name}
-          </p>
-          <p>
-            <span>Email:</span> {element.email}
-          </p>
-          <p>
-            <span>Phone:</span> {element.phone}
-          </p>
-          <p>
-            <span>Address:</span> {element.address}
-          </p>
-          <p>
-            <span>CoverLetter:</span> {element.coverLetter}
-          </p>
-        </div>
-        {/* A PDF cannot be rendered as an <img>, and the file endpoint requires
-            auth, so show a card that opens the authenticated viewer instead. */}
-        <div className="resume">
-          {element.resume?.fileId ? (
-            <button
-              type="button"
-              className="resume_open"
-              onClick={() => openModal(element.resume)}
-            >
-              <span className="resume_open_name">
-                {element.resume.filename || "Resume"}
-              </span>
-              <span className="resume_open_cta">View resume</span>
-            </button>
-          ) : (
-            <p>No resume attached</p>
-          )}
-        </div>
-      </div>
-    </>
-  );
-};

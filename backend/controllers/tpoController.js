@@ -1,7 +1,7 @@
 import { catchAsyncErrors } from "../middlewares/catchAsyncError.js";
 import { TPO } from  "../models/tpoModel.js";
 import ErrorHandler from "../middlewares/error.js";
-import { sendToken } from "../utils/jwtToken.js";
+import { clearTokenCookie, sendToken } from "../utils/jwtToken.js";
 import { User } from "../models/userSchema.js";
 import { sendVerificationCode } from "../utils/verifyEmail/email.js";
 import { sentRegisteredEmail } from "../utils/registeredUser/register.js";
@@ -73,12 +73,9 @@ export const loginTPO = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const logoutTPO = catchAsyncErrors(async (req, res, next) => {
-  res
+  // Same flags as when it was set, otherwise the browser keeps the cookie.
+  clearTokenCookie(res)
     .status(200)
-    .cookie("token", "", {
-      httpOnly: true,
-      expires: new Date(Date.now()),
-    })
     .json({
       success: true,
       message: "Logged Out Successfully.",

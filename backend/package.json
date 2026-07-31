@@ -1,8 +1,8 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "API for the JAIN Placement Portal.",
+  "main": "server.js",
   "type": "module",
   "scripts": {
     "start": "node server.js",
@@ -14,8 +14,7 @@
   "author": "Satwik Gupta and Dev yadav and Saloni Kumari and Sachin Kumar",
   "license": "ISC",
   "dependencies": {
-    "bcrypt": "^5.1.1",
-    "cloudinary": "^1.41.2",
+    "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",

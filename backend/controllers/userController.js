@@ -1,7 +1,7 @@
 import { catchAsyncErrors } from "../middlewares/catchAsyncError.js";
 import { User } from "../models/userSchema.js";
 import ErrorHandler from "../middlewares/error.js";
-import { sendToken } from "../utils/jwtToken.js";
+import { clearTokenCookie, sendToken } from "../utils/jwtToken.js";
 import { TPO } from "../models/tpoModel.js";
 import { sendVerificationCode } from "../utils/verifyEmail/email.js";
 import { sentRegisteredEmail } from "../utils/registeredUser/register.js";
@@ -94,12 +94,11 @@ export const login = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const logout = catchAsyncErrors(async (req, res, next) => {
-  res
+  // Must use the same secure/sameSite/path flags the cookie was set with —
+  // a browser will not overwrite a Secure cookie with a non-Secure one, so
+  // over HTTPS the old clear silently left the user signed in.
+  clearTokenCookie(res)
     .status(201)
-    .cookie("token", "", {
-      httpOnly: true,
-      expires: new Date(Date.now()),
-    })
     .json({
       success: true,
       message: "Logged Out Successfully.",

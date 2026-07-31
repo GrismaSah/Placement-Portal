@@ -1,20 +1,25 @@
 import http from "http";
 import app from "./app.js";
-import cloudinary from "cloudinary";
 import { initSocket } from "./socket.js";
 
-
-cloudinary.v2.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+/**
+ * Local development server.
+ *
+ * Vercel does not run this file — it invokes api/index.js per request. This
+ * is the long-lived process used during development, and it is the only place
+ * Socket.IO can exist, since serverless functions cannot hold a connection
+ * open.
+ *
+ * (The Cloudinary config that used to live here was removed: it was never
+ * referenced anywhere in the codebase and its env vars were never set.)
+ */
+const PORT = process.env.PORT || 4000;
 
 // socket.io needs the underlying HTTP server, so create it explicitly rather
 // than letting app.listen() build one internally.
 const server = http.createServer(app);
 initSocket(server);
 
-server.listen(process.env.PORT, () => {
-  console.log(`Server running at port ${process.env.PORT}`);
+server.listen(PORT, () => {
+  console.log(`Server running at port ${PORT}`);
 });

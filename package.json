@@ -1,0 +1,22 @@
+{
+  "name": "jain-placement-portal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Placement portal for JAIN (Deemed-to-be University), Bengaluru.",
+  "engines": {
+    "node": ">=18"
+  },
+  "//": [
+    "Workspace root only. Vercel builds `frontend/` and `backend/` as separate",
+    "services (see vercel.json), each installing from its own package.json —",
+    "so no dependencies belong here.",
+    "",
+    "These scripts are just conveniences for running both halves locally."
+  ],
+  "scripts": {
+    "dev": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "seed": "npm --prefix backend run seed"
+  }
+}

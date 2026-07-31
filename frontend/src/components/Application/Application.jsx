@@ -27,7 +27,9 @@ const STEPS = [
   { key: "letter", label: "Cover letter", icon: FiUploadCloud },
 ];
 
-const MAX_BYTES = 5 * 1024 * 1024;
+// Matches the server cap. The platform rejects request bodies over ~4.5MB
+// before Express sees them, so anything larger fails with an opaque error.
+const MAX_BYTES = 4 * 1024 * 1024;
 
 const Application = () => {
   const { id } = useParams();
@@ -86,7 +88,7 @@ const Application = () => {
     const picked = e.target.files?.[0];
     if (!picked) return;
     if (picked.size > MAX_BYTES) {
-      toast.error("Resume must be 5MB or smaller.");
+      toast.error("Resume must be 4MB or smaller.");
       return;
     }
     setFile(picked);
@@ -277,7 +279,7 @@ const Application = () => {
                     {file ? file.name : "Upload a different resume"}
                   </span>
                   <span className="text-xs text-[var(--text-tertiary)]">
-                    PDF, PNG, JPEG or WebP · up to 5MB
+                    PDF, PNG, JPEG or WebP · up to 4MB
                   </span>
                   <input
                     type="file"

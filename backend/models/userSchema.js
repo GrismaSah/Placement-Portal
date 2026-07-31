@@ -1,6 +1,10 @@
 import mongoose from "mongoose";
 import validator from "validator";
-import bcrypt from "bcrypt";
+// bcryptjs rather than bcrypt: the latter is a native addon that has to be
+// compiled for the target platform, which routinely fails on serverless
+// builds. The hash formats are interchangeable, so existing passwords keep
+// working unchanged.
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 

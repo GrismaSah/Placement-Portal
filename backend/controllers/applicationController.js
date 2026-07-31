@@ -54,7 +54,7 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
       );
     }
     if (uploaded.size > MAX_RESUME_BYTES) {
-      return next(new ErrorHandler("Resume must be 5MB or smaller.", 400));
+      return next(new ErrorHandler("Resume must be 4MB or smaller.", 400));
     }
     resume = await uploadFromPath(uploaded.tempFilePath, {
       filename: uploaded.name,

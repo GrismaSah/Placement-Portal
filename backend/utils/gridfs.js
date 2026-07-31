@@ -68,4 +68,4 @@ export const ALLOWED_RESUME_TYPES = [
   "image/webp",
 ];
 
-export const MAX_RESUME_BYTES = 5 * 1024 * 1024;
+export const MAX_RESUME_BYTES = 4 * 1024 * 1024;

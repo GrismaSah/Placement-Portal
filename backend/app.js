@@ -14,13 +14,28 @@ import tpoRouter from "./routes/tpoRoutes.js";
 import resumeRouter from "./routes/resumeRoutes.js";
 import notificationRouter from "./routes/notificationRoutes.js";
 
-
 const app = express();
 config({ path: ".env" });
 
+const isProduction = process.env.NODE_ENV === "production";
+
+/**
+ * CORS.
+ *
+ * In production the frontend and API are served from the same Vercel origin
+ * (static files at /, this app at /api), so cross-origin requests do not
+ * arise and no allow-list is needed. Locally they are on different ports, so
+ * the dev origins are permitted explicitly.
+ */
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  "http://localhost:5173",
+  "http://localhost:5174",
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: [process.env.FRONTEND_URL],
+    origin: isProduction ? true : allowedOrigins,
     // `methods`, not `method` — the misspelling meant this was silently
     // ignored and cors fell back to its defaults, which exclude PATCH. The
     // application status endpoint is a PATCH.
@@ -37,13 +52,40 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
   fileUpload({
     useTempFiles: true,
+    // The only writable path on a serverless filesystem.
     tempFileDir: "/tmp/",
-    // Previously uncapped: any client could stream an arbitrarily large file
-    // straight onto the server's disk.
-    limits: { fileSize: 5 * 1024 * 1024 },
+    // Vercel caps a serverless request body at 4.5MB, so a 5MB limit here
+    // would be rejected by the platform before Express ever saw it — the user
+    // would get an opaque 413 instead of our own message.
+    limits: { fileSize: 4 * 1024 * 1024 },
     abortOnLimit: true,
-    responseOnLimit: "Resume must be 5MB or smaller.",
+    responseOnLimit: "Resume must be 4MB or smaller.",
   })
+);
+
+/**
+ * Ensure the database is connected before any route runs.
+ *
+ * Previously `dbConnection()` was called once at module scope. That works for
+ * a process that boots and stays up, but on serverless a cold start can begin
+ * handling a request before the connection resolves — producing intermittent
+ * "buffering timed out" errors that only appear under real traffic.
+ */
+app.use(async (req, res, next) => {
+  try {
+    await dbConnection();
+    next();
+  } catch (error) {
+    console.error("Database connection failed:", error.message);
+    res.status(503).json({
+      success: false,
+      message: "Service temporarily unavailable. Please try again shortly.",
+    });
+  }
+});
+
+app.get("/api/health", (req, res) =>
+  res.status(200).json({ success: true, status: "ok" })
 );
 
 app.use("/api/v1/user", userRouter);
@@ -52,7 +94,6 @@ app.use("/api/v1/application", applicationRouter);
 app.use("/api/v1/tpo", tpoRouter);
 app.use("/api/v1/resume", resumeRouter);
 app.use("/api/v1/notification", notificationRouter);
-dbConnection();
 
 app.use(errorMiddleware);
 export default app;

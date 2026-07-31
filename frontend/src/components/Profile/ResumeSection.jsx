@@ -287,7 +287,7 @@ const ResumeSection = ({ resume, onChange }) => {
               {uploading ? "Uploading…" : "Upload your resume"}
             </span>
             <span className="text-xs text-[var(--text-tertiary)]">
-              PDF, PNG, JPEG or WebP · up to 5MB
+              PDF, PNG, JPEG or WebP · up to 4MB
             </span>
             <input
               ref={fileInputRef}

@@ -1,0 +1,26 @@
+# Secrets — belt and braces. .gitignore already excludes these, but the CLI
+# uploads the working tree rather than a git archive, so they are named again
+# here explicitly. A .env inside a deployment bundle is readable by anything
+# that can read the bundle.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Never upload dependencies or build output — Vercel installs and builds from
+# source on its own machines.
+node_modules
+frontend/node_modules
+backend/node_modules
+frontend/dist
+
+# Local-only tooling
+.vscode
+.idea
+*.log
+npm-debug.log*
+
+# Seeders are run manually against the database, never as part of a deploy.
+backend/seed.js
+backend/seedJobs.js

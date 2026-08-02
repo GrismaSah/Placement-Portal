@@ -1,15 +1,34 @@
+import { envInt, isProduction } from "../config/env.js";
+
+/**
+ * Strip everything a client must never receive.
+ *
+ * `sendToken` is used by login, verification and password reset, and it was
+ * serialising the whole Mongoose document — so every one of those responses
+ * carried the account's bcrypt hash and its live verification code. The hash
+ * is offline-crackable, and the code is the second factor for recruiter and
+ * officer sign-in, which made returning it self-defeating.
+ */
+const publicUser = (user) => {
+  const plain = typeof user?.toObject === "function" ? user.toObject() : { ...user };
+  delete plain.password;
+  delete plain.verificationCode;
+  delete plain.__v;
+  return plain;
+};
+
 export const sendToken = (user, statusCode, res, message) => {
   const token = user.getJWTToken();
-  const isProduction = process.env.NODE_ENV === "production";
+  const production = isProduction();
 
   const options = {
     expires: new Date(
-      Date.now() + (Number(process.env.COOKIE_EXPIRE) || 7) * 24 * 60 * 60 * 1000
+      Date.now() + envInt("COOKIE_EXPIRE", 7) * 24 * 60 * 60 * 1000
     ),
     httpOnly: true,
     // Required over HTTPS. Without it the cookie is set but never sent back,
     // so a deployed user appears to log in and is immediately anonymous again.
-    secure: isProduction,
+    secure: production,
     // The frontend and API share an origin in production, so "lax" is both
     // sufficient and safer than "none" — it keeps the cookie off cross-site
     // requests, which is a meaningful CSRF mitigation given there is no CSRF
@@ -18,23 +37,25 @@ export const sendToken = (user, statusCode, res, message) => {
     path: "/",
   };
 
-  // `token` is also returned in the body only for local debugging; the cookie
-  // is what actually authenticates every request.
   res.status(statusCode).cookie("token", token, options).json({
     success: true,
-    user,
+    user: publicUser(user),
     message,
-    token,
+    // The httpOnly cookie is what authenticates requests. The raw token is
+    // echoed only outside production, where it is useful for curl-based
+    // debugging; shipping it in the body lets any XSS lift a 7-day
+    // credential that the httpOnly flag otherwise protects.
+    ...(production ? {} : { token }),
   });
 };
 
 /** Clear the auth cookie using flags that match how it was set. */
 export const clearTokenCookie = (res) => {
-  const isProduction = process.env.NODE_ENV === "production";
+  const production = isProduction();
   return res.cookie("token", "", {
     expires: new Date(0),
     httpOnly: true,
-    secure: isProduction,
+    secure: production,
     sameSite: "lax",
     path: "/",
   });

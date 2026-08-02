@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
+import { env } from "./config/env.js";
 
 let io = null;
 
@@ -38,7 +39,7 @@ export const initSocket = (server) => {
       const { token } = parseCookies(socket.handshake.headers.cookie);
       if (!token) return next(new Error("Not authorised"));
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+      const decoded = jwt.verify(token, env("JWT_SECRET_KEY"));
       if (!decoded?.id) return next(new Error("Not authorised"));
 
       socket.userId = String(decoded.id);

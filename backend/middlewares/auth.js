@@ -3,13 +3,14 @@ import { User } from "../models/userSchema.js";
 import { catchAsyncErrors } from "./catchAsyncError.js";
 import ErrorHandler from "./error.js";
 import jwt from "jsonwebtoken";
+import { env } from "../config/env.js";
 
 /** Verify the cookie and return its payload, or null if it is absent/invalid. */
 const decodeToken = (req) => {
   const { token } = req.cookies;
   if (!token) return null;
   try {
-    return jwt.verify(token, process.env.JWT_SECRET_KEY);
+    return jwt.verify(token, env("JWT_SECRET_KEY"));
   } catch {
     return null;
   }
@@ -21,7 +22,7 @@ export const isAuthenticated = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("User Not Authorized", 401));
   }
 
-  const user = await User.findById(decoded.id).select("-password");
+  const user = await User.findById(decoded.id).select("-password -verificationCode");
 
   // A token can be structurally valid and still reference a deleted account,
   // or belong to a TPO (who lives in a different collection). Previously
@@ -41,7 +42,7 @@ export const isAuthenticatedTPO = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("User Not Authorized", 401));
   }
 
-  const tpo = await TPO.findById(decoded.id).select("-password");
+  const tpo = await TPO.findById(decoded.id).select("-password -verificationCode");
   if (!tpo) {
     return next(new ErrorHandler("User Not Authorized", 401));
   }
@@ -66,13 +67,13 @@ export const isAuthenticatedAny = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("User Not Authorized", 401));
   }
 
-  const user = await User.findById(decoded.id).select("-password");
+  const user = await User.findById(decoded.id).select("-password -verificationCode");
   if (user) {
     req.user = user;
     return next();
   }
 
-  const tpo = await TPO.findById(decoded.id).select("-password");
+  const tpo = await TPO.findById(decoded.id).select("-password -verificationCode");
   if (tpo) {
     tpo.role = "TPO";
     req.user = tpo;

@@ -6,6 +6,7 @@ import fileUpload from "express-fileupload";
 
 import { errorMiddleware } from "./middlewares/error.js";
 import { dbConnection } from "./database/dbConnection.js";
+import { env, isProduction } from "./config/env.js";
 
 import userRouter from "./routes/userRoutes.js";
 import jobRouter from "./routes/jobRoutes.js";
@@ -17,7 +18,7 @@ import notificationRouter from "./routes/notificationRoutes.js";
 const app = express();
 config({ path: ".env" });
 
-const isProduction = process.env.NODE_ENV === "production";
+const production = isProduction();
 
 /**
  * CORS.
@@ -28,14 +29,14 @@ const isProduction = process.env.NODE_ENV === "production";
  * the dev origins are permitted explicitly.
  */
 const allowedOrigins = [
-  process.env.FRONTEND_URL,
+  env("FRONTEND_URL"),
   "http://localhost:5173",
   "http://localhost:5174",
 ].filter(Boolean);
 
 app.use(
   cors({
-    origin: isProduction ? true : allowedOrigins,
+    origin: production ? true : allowedOrigins,
     // `methods`, not `method` — the misspelling meant this was silently
     // ignored and cors fell back to its defaults, which exclude PATCH. The
     // application status endpoint is a PATCH.

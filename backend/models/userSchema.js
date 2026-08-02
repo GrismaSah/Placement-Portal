@@ -6,6 +6,7 @@ import validator from "validator";
 // working unchanged.
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { env } from "../config/env.js";
 
 
 const userSchema = new mongoose.Schema({
@@ -121,8 +122,9 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
 };
 
 userSchema.methods.getJWTToken = function () {
-  return jwt.sign({ id: this._id }, process.env.JWT_SECRET_KEY, {
-    expiresIn: process.env.JWT_EXPIRE,
+  // Trimmed: a trailing newline on JWT_EXPIRE makes jsonwebtoken throw.
+  return jwt.sign({ id: this._id }, env("JWT_SECRET_KEY"), {
+    expiresIn: env("JWT_EXPIRE", "7d"),
   });
 };
 

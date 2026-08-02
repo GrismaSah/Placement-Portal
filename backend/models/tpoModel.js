@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 // See userSchema.js — bcryptjs avoids a native build step on serverless.
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { env } from "../config/env.js";
 import validator from "validator";
 
 
@@ -48,8 +49,8 @@ tpoSchema.methods.comparePassword = async function (enteredPassword) {
 };
 
 tpoSchema.methods.getJWTToken = function () {
-  return jwt.sign({ id: this._id }, process.env.JWT_SECRET_KEY, {
-    expiresIn: process.env.JWT_EXPIRE,
+  return jwt.sign({ id: this._id }, env("JWT_SECRET_KEY"), {
+    expiresIn: env("JWT_EXPIRE", "7d"),
   });
 };
 

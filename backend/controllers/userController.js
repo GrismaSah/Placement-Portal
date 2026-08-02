@@ -32,12 +32,27 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     verificationCode,
   });
   
-  sendVerificationCode(email, verificationCode);
+  const delivery = await sendVerificationCode(email, verificationCode);
 
   res.status(200).json({
     success: true,
-    message: "Verification code sent to your email. Please check your inbox.",
-    user,
+    // Tell the truth about delivery. Claiming "check your inbox" when no mail
+    // server is configured leaves the user waiting for something that will
+    // never arrive.
+    message: delivery.sent
+      ? "Verification code sent to your email. Please check your inbox."
+      : "Account created, but the verification email could not be sent. Please contact the placement office.",
+    emailSent: delivery.sent,
+    // Return only non-sensitive fields. The whole Mongoose document used to go
+    // back here, which meant every registration response contained the
+    // account's bcrypt hash and its plaintext verification code — the latter
+    // defeating the point of email verification entirely.
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
   });
 });
 

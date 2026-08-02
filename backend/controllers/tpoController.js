@@ -33,12 +33,22 @@ export const registerTPO = catchAsyncErrors(async (req, res, next) => {
     password,
     verificationCode,
   });
-  sendVerificationCode(email, verificationCode);
+  const delivery = await sendVerificationCode(email, verificationCode);
 
   res.status(200).json({
     success: true,
-    message: "Verification code sent to your email. Please check your inbox.",
-    tpo,
+    message: delivery.sent
+      ? "Verification code sent to your email. Please check your inbox."
+      : "Account created, but the verification email could not be sent.",
+    emailSent: delivery.sent,
+    // Only non-sensitive fields — the full document leaked the bcrypt hash and
+    // the plaintext verification code.
+    tpo: {
+      _id: tpo._id,
+      firstname: tpo.firstname,
+      lastname: tpo.lastname,
+      email: tpo.email,
+    },
   });
 });
 

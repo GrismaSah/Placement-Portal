@@ -20,8 +20,18 @@ const ForgotPassword = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
 
-  const isTPO = params.get("role") === "tpo";
+  const roleParam = params.get("role");
+  const isTPO = roleParam === "tpo";
   const base = isTPO ? "/api/v1/tpo" : "/api/v1/user";
+  // Where "back to sign in" goes once the reset is done — the account types
+  // live on different, unlinked login routes now (see Login.jsx), so this
+  // has to route back to the same scoped page the reset was started from.
+  const loginPath =
+    roleParam === "tpo"
+      ? "/placement-office/login"
+      : roleParam === "tnp"
+        ? "/recruiter/login"
+        : "/login";
 
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
@@ -97,7 +107,7 @@ const ForgotPassword = () => {
         verificationCode: code,
       });
       toast.success("Password updated. You can sign in now.");
-      navigate("/login", { replace: true });
+      navigate(loginPath, { replace: true });
     } catch (err) {
       const message = apiError(err, "Could not update your password.");
       setError(message);
@@ -110,7 +120,7 @@ const ForgotPassword = () => {
   const footer = (
     <>
       Remembered it?{" "}
-      <Link to="/login" className="font-semibold text-[var(--brand)] hover:underline">
+      <Link to={loginPath} className="font-semibold text-[var(--brand)] hover:underline">
         Back to sign in
       </Link>
     </>

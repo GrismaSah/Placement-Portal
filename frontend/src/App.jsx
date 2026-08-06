@@ -120,7 +120,28 @@ const App = () => {
           path="/login"
           element={
             <PublicOnlyRoute>
-              <Login />
+              <Login allowedRoles={["Student"]} />
+            </PublicOnlyRoute>
+          }
+        />
+        {/*
+          Deliberately not linked from any nav, footer, or the student /login
+          page — see the comment atop Login.jsx. Reached only by a direct URL
+          given to recruiters/officers out of band.
+        */}
+        <Route
+          path="/recruiter/login"
+          element={
+            <PublicOnlyRoute>
+              <Login allowedRoles={["TNP"]} />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/placement-office/login"
+          element={
+            <PublicOnlyRoute>
+              <Login allowedRoles={["TPO"]} />
             </PublicOnlyRoute>
           }
         />
@@ -238,7 +259,7 @@ const App = () => {
           element={<Navigate to="/app/applications" replace />}
         />
         <Route path="/profile" element={<Navigate to="/app/profile" replace />} />
-        <Route path="/tpo/login" element={<Navigate to="/login" replace />} />
+        <Route path="/tpo/login" element={<Navigate to="/placement-office/login" replace />} />
         <Route path="/tpo/register" element={<Navigate to="/register" replace />} />
 
         <Route

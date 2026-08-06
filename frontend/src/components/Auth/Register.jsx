@@ -14,6 +14,7 @@ import { Context } from "../../main";
 import { api, apiError } from "../../lib/api";
 import { cn } from "../../lib/cn";
 import { Button, Input } from "../ui";
+import { BRAND } from "../../constants/brand";
 import AuthLayout from "./AuthLayout";
 import OtpInput from "./OtpInput";
 
@@ -93,8 +94,20 @@ const Register = () => {
     if (!/^\d{10,}$/.test(form.phone.replace(/\D/g, "")))
       next.phone = "Enter a valid phone number.";
     if (!form.address.trim()) next.address = "Address is required.";
-    if (role === "Student" && !form.enrollment.trim())
-      next.enrollment = "Your enrollment number is required.";
+    if (role === "Student") {
+      if (!form.enrollment.trim()) {
+        next.enrollment = "Your enrollment number is required.";
+      } else if (!next.email) {
+        // The server enforces this too (userController.js register()) — this
+        // is just faster feedback than a round trip. Ties every student
+        // account to the mailbox the university actually issued for that
+        // enrollment number, so a personal address can't be used instead.
+        const expected = `${form.enrollment.trim().toLowerCase()}@${BRAND.studentEmailDomain}`;
+        if (form.email.trim().toLowerCase() !== expected) {
+          next.email = `Use your official JAIN University email: ${expected}`;
+        }
+      }
+    }
     if (form.password.length < 8) next.password = "Use at least 8 characters.";
     if (form.password !== form.confirmPassword)
       next.confirmPassword = "Passwords don't match.";
@@ -196,7 +209,10 @@ const Register = () => {
       footer={
         <>
           Already have an account?{" "}
-          <Link to="/login" className="font-semibold text-[var(--brand)] hover:underline">
+          <Link
+            to={role === "TNP" ? "/recruiter/login" : "/login"}
+            className="font-semibold text-[var(--brand)] hover:underline"
+          >
             Sign in
           </Link>
         </>
@@ -255,7 +271,16 @@ const Register = () => {
           onChange={set("email")}
           error={errors.email}
           autoComplete="email"
-          placeholder="you@jain.test"
+          placeholder={
+            role === "Student"
+              ? `enrollment@${BRAND.studentEmailDomain}`
+              : "you@company.com"
+          }
+          hint={
+            role === "Student"
+              ? "Must be your official JAIN University email, matching your enrollment number."
+              : undefined
+          }
           leadingIcon={<FiMail className="size-4" />}
         />
 

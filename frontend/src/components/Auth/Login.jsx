@@ -10,25 +10,36 @@ import AuthLayout from "./AuthLayout";
 import OtpInput from "./OtpInput";
 
 /**
- * One sign-in screen for all three roles.
+ * Sign-in, scoped to whichever roles the current route allows.
  *
- * Previously students and recruiters shared /login with a bare <select>, while
- * placement officers had an entirely separate /tpo/login page that most of
- * them had no way to discover. The segmented control makes the choice
- * explicit, and the role decides which endpoint is called.
+ * All three roles used to sit behind one segmented control on /login, which
+ * meant every visitor — including a student who had never heard of the
+ * recruiter or placement-officer roles — saw both listed as options to try.
+ * Anyone who later obtained a recruiter's or officer's real password could
+ * just pick that tab on the same public page. The actual authorization check
+ * already lives server-side (`login()` rejects a role/account mismatch), so
+ * this isn't a security boundary — but there's no reason to advertise
+ * privileged sign-in paths on the page every student lands on.
+ *
+ * /login now only ever renders the Student option (no picker at all).
+ * /recruiter/login and /placement-office/login are separate, unlinked routes
+ * that render this same component scoped to just that one role.
  */
 
-const ROLES = [
+const ALL_ROLES = [
   { value: "Student", label: "Student", icon: FiUser },
   { value: "TNP", label: "Recruiter", icon: FiBriefcase },
   { value: "TPO", label: "Placement Officer", icon: FiCheckSquare },
 ];
 
-const Login = () => {
+const Login = ({ allowedRoles = ["Student"] }) => {
   const { setIsAuthorized } = useContext(Context);
   const navigate = useNavigate();
 
-  const [role, setRole] = useState("Student");
+  const ROLES = ALL_ROLES.filter((r) => allowedRoles.includes(r.value));
+  const showPicker = ROLES.length > 1;
+
+  const [role, setRole] = useState(ROLES[0]?.value ?? "Student");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
@@ -175,21 +186,42 @@ const Login = () => {
   }
 
   // ---- Credentials step ---------------------------------------------------
+  const copy = {
+    Student: {
+      title: "Sign in",
+      subtitle: "Welcome back to the JAIN Placement Portal.",
+    },
+    TNP: {
+      title: "Recruiter sign in",
+      subtitle: "Post openings and manage your applicants.",
+    },
+    TPO: {
+      title: "Placement Officer sign in",
+      subtitle: "Manage recruiter approvals and platform stats.",
+    },
+  }[ROLES[0]?.value ?? "Student"];
+
   return (
     <AuthLayout
-      title="Sign in"
-      subtitle="Welcome back to the JAIN Placement Portal."
+      title={copy.title}
+      subtitle={copy.subtitle}
       footer={
-        <>
-          Don&rsquo;t have an account?{" "}
-          <Link to="/register" className="font-semibold text-[var(--brand)] hover:underline">
-            Create one
-          </Link>
-        </>
+        isTPO ? undefined : (
+          <>
+            Don&rsquo;t have an account?{" "}
+            <Link
+              to="/register"
+              className="font-semibold text-[var(--brand)] hover:underline"
+            >
+              Create one
+            </Link>
+          </>
+        )
       }
     >
       <form onSubmit={submitCredentials} className="space-y-5">
-        {/* Role picker */}
+        {/* Role picker — only shown on a route that allows more than one role */}
+        {showPicker && (
         <div>
           <span className="mb-1.5 block text-sm font-medium text-[var(--text-primary)]">
             I&rsquo;m signing in as
@@ -226,6 +258,7 @@ const Login = () => {
             })}
           </div>
         </div>
+        )}
 
         <Input
           label="Email"
@@ -252,7 +285,7 @@ const Login = () => {
           />
           <div className="mt-2 text-right">
             <Link
-              to={`/forgot-password?role=${isTPO ? "tpo" : "user"}`}
+              to={`/forgot-password?role=${role.toLowerCase()}`}
               className="text-sm font-medium text-[var(--brand)] hover:underline"
             >
               Forgot password?

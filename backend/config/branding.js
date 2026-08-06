@@ -15,6 +15,9 @@ export const BRANDING = {
 
   supportEmail: process.env.SUPPORT_EMAIL || "placements@jainuniversity.ac.in",
   website: "https://www.jainuniversity.ac.in",
+  // Students must register with <enrollment>@<this domain> — ties every
+  // account to a real institutional mailbox instead of an arbitrary address.
+  studentEmailDomain: "jainuniversity.ac.in",
   portalUrl: process.env.FRONTEND_URL || "http://localhost:5173",
 
   address:

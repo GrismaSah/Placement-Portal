@@ -6,6 +6,7 @@ import { TPO } from "../models/tpoModel.js";
 import { sendVerificationCode } from "../utils/verifyEmail/email.js";
 import { sentRegisteredEmail } from "../utils/registeredUser/register.js";
 import { emitProfileUpdate } from "../socket.js";
+import { BRANDING } from "../config/branding.js";
 
 export const register = catchAsyncErrors(async (req, res, next) => {
   const { name, email, phone, password, role, enrollment, address } = req.body;
@@ -14,7 +15,46 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Please fill the complete form!"));
   }
 
-  const isEmail = await User.findOne({ email });
+  // Normalise up front — comparisons below and the pre-existence checks both
+  // need this, and it must match what the schema will store on save (see
+  // userSchema.js) or a mismatched-case duplicate would slip past both.
+  const normalizedEmail = String(email).trim().toLowerCase();
+
+  if (role === "Student") {
+    if (!enrollment || !String(enrollment).trim()) {
+      return next(new ErrorHandler("Please enter your enrollment number.", 400));
+    }
+
+    const normalizedEnrollment = String(enrollment).trim().toUpperCase();
+    const expectedEmail = `${normalizedEnrollment.toLowerCase()}@${BRANDING.studentEmailDomain}`;
+
+    // Ties every student account to a mailbox the university actually
+    // issued for that enrollment number — an arbitrary personal address
+    // proves nothing about who the registrant is.
+    if (normalizedEmail !== expectedEmail) {
+      return next(
+        new ErrorHandler(
+          `Students must register with their official JAIN University email — ${expectedEmail}.`,
+          400
+        )
+      );
+    }
+
+    // The unique index on {enrollment, role:"Student"} is the real
+    // backstop (see userSchema.js) for a race between two simultaneous
+    // registrations; this is just a friendlier message for the common case.
+    const isEnrollment = await User.findOne({
+      role: "Student",
+      enrollment: normalizedEnrollment,
+    });
+    if (isEnrollment) {
+      return next(
+        new ErrorHandler("This enrollment number is already registered.", 400)
+      );
+    }
+  }
+
+  const isEmail = await User.findOne({ email: normalizedEmail });
   if (isEmail) {
     return next(new ErrorHandler("Email already registered!"));
   }
@@ -23,7 +63,7 @@ export const register = catchAsyncErrors(async (req, res, next) => {
   ).toString();
   const user = await User.create({
     name,
-    email,
+    email: normalizedEmail,
     phone,
     password,
     role,
@@ -32,7 +72,7 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     verificationCode,
   });
   
-  const delivery = await sendVerificationCode(email, verificationCode);
+  const delivery = await sendVerificationCode(normalizedEmail, verificationCode);
 
   res.status(200).json({
     success: true,
@@ -61,8 +101,11 @@ export const login = catchAsyncErrors(async (req, res, next) => {
   if (!email || !password || !role) {
     return next(new ErrorHandler("Please provide email ,password and role."));
   }
+  // Stored emails are lowercased on save (see userSchema.js); a query has to
+  // match that or "Student@Jain.Test" typed at login stops finding the
+  // account "student@jain.test" that was actually stored.
   // const user = await User.findOne({ email }).select("+password");
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email: String(email).trim().toLowerCase() });
   if (!user) {
     return next(new ErrorHandler("Invalid Email.", 400));
   }
@@ -162,7 +205,7 @@ export const verifyUser = catchAsyncErrors(async (req, res, next) => {
   }
   // console.log(verificationCode, email);
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email: String(email).trim().toLowerCase() });
   if (!user) {
     return next(new ErrorHandler("User not found.", 404));
   }
@@ -187,7 +230,7 @@ export const generateVerificationCode = catchAsyncErrors(
     const verificationCode = Math.floor(
       100000 + Math.random() * 900000
     ).toString();
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: String(email).trim().toLowerCase() });
     if (!user) {
       return next(new ErrorHandler("User not found.", 404));
     }
@@ -206,7 +249,7 @@ export const generateVerificationCode = catchAsyncErrors(
 
 export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
   const { email, verificationCode } = req.body;
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email: String(email).trim().toLowerCase() });
 
   if (!user) {
     return next(new ErrorHandler("User not found.", 404));
@@ -251,7 +294,7 @@ export const generateNewPassword = catchAsyncErrors(async (req, res, next) => {
     );
   }
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email: String(email).trim().toLowerCase() });
   if (!user) {
     return next(new ErrorHandler("User not found.", 404));
   }

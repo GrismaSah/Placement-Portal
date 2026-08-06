@@ -31,6 +31,9 @@ export const BRAND = {
   phone: "080-69279444",
   email: "admissions@jainuniversity.ac.in",
   supportEmail: "placements@jainuniversity.ac.in",
+  // Mirrors backend/config/branding.js — students must register with
+  // <enrollment>@<this domain>, enforced server-side in userController.js.
+  studentEmailDomain: "jainuniversity.ac.in",
 
   // JGI Blue + JGI Yellow, per the university's logo & graphic standards.
   colors: {

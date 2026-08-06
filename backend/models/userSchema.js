@@ -20,9 +20,18 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, "Please enter your Email!"],
     validate: [validator.isEmail, "Please provide a valid Email!"],
+    // Without this, "Student@Jain.Test" and "student@jain.test" pass the
+    // unique index as two different values — the index only rejects an
+    // exact byte-for-byte repeat, not the same mailbox typed differently.
+    lowercase: true,
+    trim: true,
   },
   enrollment: {
     type: String,
+    // Same reasoning as email: normalise here so "23btrcn001" and
+    // "23BTRCN001" collide as the one enrollment number they actually are.
+    uppercase: true,
+    trim: true,
   },
   address: {
     type: String,
@@ -103,6 +112,17 @@ const userSchema = new mongoose.Schema({
 // Email uniqueness was only checked in the controller, which two concurrent
 // registrations could both pass.
 userSchema.index({ email: 1 }, { unique: true });
+
+// Nothing previously stopped two accounts from sharing one enrollment
+// number — two different emails could both register as "23BTRCN001". Partial
+// (not a plain unique index) because `enrollment` only means anything for
+// Student accounts; a TNP/recruiter document has no enrollment field at all,
+// and a plain unique index would treat every one of those missing values as
+// a duplicate of each other after the first.
+userSchema.index(
+  { enrollment: 1 },
+  { unique: true, partialFilterExpression: { role: "Student" } }
+);
 
 // Supports the placement dashboard's branch/batch breakdowns and the TNP
 // approval queue.

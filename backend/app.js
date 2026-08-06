@@ -20,6 +20,13 @@ config({ path: ".env" });
 
 const production = isProduction();
 
+// Vercel puts the app behind a proxy, so the real client IP only arrives via
+// X-Forwarded-For. Without this, express-rate-limit sees that header on every
+// request but has no proxy trust configured to justify it, and refuses to
+// start up requests with a validation error — the rate limiter below would
+// break login in production, not just fail to target the right IP.
+app.set("trust proxy", 1);
+
 /**
  * CORS.
  *

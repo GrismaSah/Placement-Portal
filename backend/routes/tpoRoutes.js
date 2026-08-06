@@ -2,6 +2,7 @@ import express from "express";
 import { attachTPO, isAuthenticatedTPO } from "../middlewares/auth.js";
 import { forgotPasswordTPO, generateNewPasswordTPO, generateVerificationCodeTPO, getPendingTNPs, getTPO, handleTNPRequest, loginTPO, logoutTPO, registerTPO, updatePasswordTPO, updateProfileTPO, verifyUserTPO } from "../controllers/tpoController.js";
 import { authorizeRoles } from "../middlewares/tpoAuth.js";
+import { authLimiter } from "../middlewares/rateLimit.js";
 import {
   getPlacementAnalytics,
   getStudentDirectory,
@@ -9,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.post("/register", registerTPO);
-router.post("/login", loginTPO);
-router.post("/verify", verifyUserTPO);
-router.post("/generate-code", generateVerificationCodeTPO);
+router.post("/register", authLimiter, registerTPO);
+router.post("/login", authLimiter, loginTPO);
+router.post("/verify", authLimiter, verifyUserTPO);
+router.post("/generate-code", authLimiter, generateVerificationCodeTPO);
 router.get("/logout", isAuthenticatedTPO, logoutTPO);
 // attachTPO, not isAuthenticatedTPO: the frontend's silent session check
 // (see the same comment on GET /user/getuser). No session is a normal "no".
@@ -30,11 +31,11 @@ router.get(
   authorizeRoles("TPO"),
   getPendingTNPs
 );
-router.post("/forgot-password", forgotPasswordTPO);
+router.post("/forgot-password", authLimiter, forgotPasswordTPO);
 // Was wired to generateVerificationCodeTPO — the password reset endpoint was
 // resending a code instead of setting the new password, so TPO reset silently
 // never worked.
-router.post("/generate-new-password", generateNewPasswordTPO);
+router.post("/generate-new-password", authLimiter, generateNewPasswordTPO);
 
 // ---- Placement reporting ----
 // The office previously had no reporting at all.

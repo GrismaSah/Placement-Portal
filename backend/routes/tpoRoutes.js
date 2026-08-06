@@ -1,5 +1,5 @@
 import express from "express";
-import { isAuthenticatedTPO } from "../middlewares/auth.js";
+import { attachTPO, isAuthenticatedTPO } from "../middlewares/auth.js";
 import { forgotPasswordTPO, generateNewPasswordTPO, generateVerificationCodeTPO, getPendingTNPs, getTPO, handleTNPRequest, loginTPO, logoutTPO, registerTPO, updatePasswordTPO, updateProfileTPO, verifyUserTPO } from "../controllers/tpoController.js";
 import { authorizeRoles } from "../middlewares/tpoAuth.js";
 import {
@@ -14,7 +14,9 @@ router.post("/login", loginTPO);
 router.post("/verify", verifyUserTPO);
 router.post("/generate-code", generateVerificationCodeTPO);
 router.get("/logout", isAuthenticatedTPO, logoutTPO);
-router.get("/me", isAuthenticatedTPO, getTPO);
+// attachTPO, not isAuthenticatedTPO: the frontend's silent session check
+// (see the same comment on GET /user/getuser). No session is a normal "no".
+router.get("/me", attachTPO, getTPO);
 
 router.post(
   "/tnp-request",

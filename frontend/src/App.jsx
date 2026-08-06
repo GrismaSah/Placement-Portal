@@ -58,17 +58,21 @@ const App = () => {
     const fetchUser = async () => {
       try {
         const response = await api.get("/api/v1/user/getuser");
-        const user = response.data.user;
-        setUser(user);
+        let user = response.data.user;
 
         // A TPO's token verifies against a different collection, so /getuser
         // resolves to null for them. That null is the signal to try /tpo/me.
+        // Both endpoints answer "is there a session?" with 200 + user: null
+        // rather than a 401 — there being no session yet is the normal state
+        // on first load, not an error — so authorization now has to be
+        // decided from the payload instead of from a caught exception.
         if (user === null) {
           const tpo = await api.get("/api/v1/tpo/me");
-          setUser(tpo.data.user);
+          user = tpo.data.user;
         }
 
-        setIsAuthorized(true);
+        setUser(user);
+        setIsAuthorized(user !== null);
       } catch {
         setIsAuthorized(false);
       } finally {

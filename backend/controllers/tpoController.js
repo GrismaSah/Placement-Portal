@@ -241,10 +241,13 @@ export const generateVerificationCodeTPO = catchAsyncErrors(
     }
     user.verificationCode = verificationCode;
     await user.save();
-    sendVerificationCode(email, verificationCode);
+    const delivery = await sendVerificationCode(email, verificationCode);
     res.status(200).json({
       success: true,
-      message: "Verification code sent to your email. Please check your inbox.",
+      message: delivery.sent
+        ? "Verification code sent to your email. Please check your inbox."
+        : "Could not send the verification email. Please contact the placement office.",
+      emailSent: delivery.sent,
     });
   }
 );

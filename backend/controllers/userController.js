@@ -78,6 +78,29 @@ export const login = catchAsyncErrors(async (req, res, next) => {
   }
 
   if (role === "TNP") {
+    // A TNP's code is nulled after every use (registration or previous
+    // login), so a plain email+password submit never has one to check
+    // against. Previously that fell straight into the mismatch branch below
+    // and errored with "Invalid verification code" — which the frontend then
+    // read as "a code exists, ask for it," sending the recruiter to a
+    // "We've sent a 6-digit code" screen when no code had actually been
+    // generated or emailed. Mint and send one here, the same way the
+    // Student branch below already does for an unverified student.
+    if (!verificationCode) {
+      const freshCode = Math.floor(100000 + Math.random() * 900000).toString();
+      user.verificationCode = freshCode;
+      await user.save();
+      const delivery = await sendVerificationCode(email, freshCode);
+
+      return res.status(200).json({
+        success: true,
+        message: delivery.sent
+          ? "Verification code sent to your email. Please check your inbox."
+          : "Could not send the verification email. Please contact the placement office.",
+        emailSent: delivery.sent,
+      });
+    }
+
     if (user.verificationCode !== verificationCode) {
       return next(new ErrorHandler("Invalid verification code.", 400));
     }
@@ -94,13 +117,16 @@ export const login = catchAsyncErrors(async (req, res, next) => {
     const verificationCode = Math.floor(
       100000 + Math.random() * 900000
     ).toString();
-    sendVerificationCode(email, verificationCode);
     user.verificationCode = verificationCode;
     await user.save();
+    const delivery = await sendVerificationCode(email, verificationCode);
 
     return res.status(200).json({
       success: true,
-      message: "Verification code sent to your email. Please check your inbox.",
+      message: delivery.sent
+        ? "Verification code sent to your email. Please check your inbox."
+        : "Could not send the verification email. Please contact the placement office.",
+      emailSent: delivery.sent,
       user,
     });
   }
@@ -167,10 +193,13 @@ export const generateVerificationCode = catchAsyncErrors(
     }
     user.verificationCode = verificationCode;
     await user.save();
-    sendVerificationCode(email, verificationCode);
+    const delivery = await sendVerificationCode(email, verificationCode);
     res.status(200).json({
       success: true,
-      message: "Verification code sent to your email. Please check your inbox.",
+      message: delivery.sent
+        ? "Verification code sent to your email. Please check your inbox."
+        : "Could not send the verification email. Please contact the placement office.",
+      emailSent: delivery.sent,
     });
   }
 );

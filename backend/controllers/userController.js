@@ -7,6 +7,7 @@ import { sendVerificationCode } from "../utils/verifyEmail/email.js";
 import { sentRegisteredEmail } from "../utils/registeredUser/register.js";
 import { emitProfileUpdate } from "../socket.js";
 import { BRANDING } from "../config/branding.js";
+import { StudentAllowlist } from "../models/studentAllowlistModel.js";
 
 export const register = catchAsyncErrors(async (req, res, next) => {
   const { name, email, phone, password, role, enrollment, address } = req.body;
@@ -35,6 +36,21 @@ export const register = catchAsyncErrors(async (req, res, next) => {
       return next(
         new ErrorHandler(
           `Students must register with their official JAIN University email — ${expectedEmail}.`,
+          400
+        )
+      );
+    }
+
+    // Only enrollment numbers JAIN actually issued may register — otherwise
+    // the email-domain check above is satisfiable by anyone who can guess a
+    // plausible-looking enrollment number.
+    const allowlistEntry = await StudentAllowlist.findOne({
+      enrollment: normalizedEnrollment,
+    });
+    if (!allowlistEntry || allowlistEntry.email !== normalizedEmail) {
+      return next(
+        new ErrorHandler(
+          "This enrollment number is not recognized. Contact the placement office if you believe this is an error.",
           400
         )
       );

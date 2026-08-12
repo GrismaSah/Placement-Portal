@@ -43,6 +43,7 @@ import MyApplications from "./components/Application/MyApplications";
 import PostJob from "./components/Job/PostJob";
 import MyJobs from "./components/Job/MyJobs";
 import JobApplications from "./components/Application/JobApplications";
+import AllApplicants from "./components/Application/AllApplicants";
 import TnpApprovals from "./components/Officer/TnpApprovals";
 import Analytics from "./components/Officer/Analytics";
 import Students from "./components/Officer/Students";
@@ -218,6 +219,14 @@ const App = () => {
             element={
               <RoleRoute allow={[ROLES.RECRUITER]}>
                 <JobApplications />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="applicants"
+            element={
+              <RoleRoute allow={[ROLES.RECRUITER]}>
+                <AllApplicants />
               </RoleRoute>
             }
           />

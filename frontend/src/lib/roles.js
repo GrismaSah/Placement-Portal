@@ -57,23 +57,25 @@ export const isOfficer = (user) => user?.role === ROLES.OFFICER;
 export const navFor = (role) => {
   const common = [
     { to: "/app/dashboard", label: "Dashboard", icon: FiGrid, end: true },
-    { to: "/app/jobs", label: "Openings", icon: FiSearch },
   ];
 
   if (role === ROLES.STUDENT) {
     return [
       ...common,
+      { to: "/app/jobs", label: "Openings", icon: FiSearch },
       { to: "/app/applications", label: "My applications", icon: FiFileText },
       { to: "/app/resume", label: "Resume", icon: FiUser },
     ];
   }
 
   if (role === ROLES.RECRUITER) {
-    // Applicants are reached per-posting rather than as a flat list — the
-    // backend scopes /application/TNP/getall to a single jobId, which is what
-    // makes the ownership check possible.
+    // A recruiter's own workflow is applicants + postings, not browsing every
+    // other company's openings — /api/v1/application/TNP/getall now supports
+    // an omitted jobId for exactly this: every applicant across every job
+    // this TNP owns, in one table (see AllApplicants.jsx).
     return [
       ...common,
+      { to: "/app/applicants", label: "Applicants", icon: FiUsers },
       { to: "/app/postings", label: "My postings", icon: FiBriefcase },
       { to: "/app/postings/new", label: "Post a role", icon: FiPlus },
     ];

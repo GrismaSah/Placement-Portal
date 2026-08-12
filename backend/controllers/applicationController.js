@@ -262,8 +262,23 @@ export const TNPGetAllApplications = catchAsyncErrors(
     const { _id } = req.user;
 
     if (!jobId) {
-      // Without a jobId this used to return every application in the database.
-      return next(new ErrorHandler("A jobId is required.", 400));
+      // A TNP with no jobId gets every applicant across their own postings —
+      // still scoped to jobs they own. Any other role (TPO) still needs an
+      // explicit jobId; without a jobId this used to return every
+      // application in the database.
+      if (role !== "TNP") {
+        return next(new ErrorHandler("A jobId is required.", 400));
+      }
+
+      const ownJobIds = await Job.find({ postedBy: _id }).distinct("_id");
+      const applications = await Application.find({ jobId: { $in: ownJobIds } })
+        .populate("jobId", "title company")
+        .sort({ createdAt: -1 });
+
+      return res.status(200).json({
+        success: true,
+        applications,
+      });
     }
 
     const job = await Job.findById(jobId).select("postedBy title company");

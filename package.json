@@ -7,9 +7,8 @@
     "node": ">=18"
   },
   "//": [
-    "Workspace root only. Vercel builds `frontend/` and `backend/` as separate",
-    "services (see vercel.json), each installing from its own package.json —",
-    "so no dependencies belong here.",
+    "Workspace root only. `frontend/` and `backend/` each install from their",
+    "own package.json, so no dependencies belong here.",
     "",
     "These scripts are just conveniences for running both halves locally."
   ],

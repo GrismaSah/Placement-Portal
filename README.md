@@ -18,16 +18,15 @@ Application pipeline: `Applied → Shortlisted → Interview → Offered → Pla
 
 ## Architecture
 
-Two independent apps in one repository, deployed as separate services behind a single Vercel project.
+Two independent apps in one repository, run locally side by side.
 
 ![Architecture — how the pieces fit together](docs/architecture.svg)
 
-- **Frontend** — React 18 + Vite, built to a static bundle and served by Vercel.
-- **Backend** — Express REST API. `server.js` runs it locally as a long-lived process (needed for Socket.IO); on Vercel it runs as a serverless function per request, so Socket.IO is a local-dev-only feature.
+- **Frontend** — React 18 + Vite dev server.
+- **Backend** — Express REST API. `server.js` runs it as a long-lived process, which is also what Socket.IO needs to work.
 - **Database** — MongoDB Atlas, single database `JAIN_PLACEMENT`, three account-bearing collections (`users` for Students/Recruiters, `admins` for the placement office, plus a `studentallowlists` roster of valid enrollment numbers).
-- **File storage** — resumes live in MongoDB GridFS, not on disk (serverless functions have no persistent filesystem).
+- **File storage** — resumes live in MongoDB GridFS, not on disk.
 - **Auth** — JWT in an httpOnly cookie, one token format shared across all three roles; middleware resolves which collection (`users` vs `admins`) a token belongs to.
-- **Routing** — `vercel.json` defines two services (`frontend`, `backend`) under one project and rewrites `/api/*` to the backend, everything else to the frontend.
 
 ### Project structure
 
@@ -38,7 +37,6 @@ placement-portal/
 ├── docs/
 │   └── architecture.svg  # the diagram above
 ├── .env.example          # env var template — copy into backend/.env
-├── vercel.json           # two-service Vercel deployment config
 └── package.json          # workspace-root convenience scripts only
 ```
 
@@ -120,4 +118,4 @@ All routes are mounted under `/api/v1/`:
 
 ## Deployment
 
-Configured for Vercel via the root `vercel.json`: the frontend builds as a static Vite site, the backend runs as a serverless Express service, and `/api/*` traffic is routed to it. Environment variables are set in the Vercel dashboard rather than committed — see `.env.example` for the full list required.
+Not deployed anywhere — this project runs locally only. See [Getting started](#getting-started) above.

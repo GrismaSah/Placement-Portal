@@ -41,5 +41,5 @@ All mounted under `/api/v1/`:
 ## Notes
 
 - **Two account collections.** Students and Recruiters live in `users`; the placement office lives in a separate `admins` collection. Auth middleware checks both, since one JWT format is shared across all three roles.
-- **Resumes live in GridFS**, not on disk — serverless functions have no persistent filesystem.
-- **`server.js` is local-dev only.** It's the only place Socket.IO can run (a long-lived process). Vercel invokes the Express app directly per request instead, so live in-app notifications only work when running this file locally.
+- **Resumes live in GridFS**, not on disk.
+- **`server.js` is the app's entrypoint.** It's the only place Socket.IO can run (a long-lived process), so live in-app notifications only work when running this file.

@@ -8,14 +8,14 @@
   <rect x="0" y="0" width="1180" height="560" rx="16" fill="#f8fafc"/>
 
   <text x="40" y="46" font-size="22" font-weight="700" fill="#0f172a">JAIN Placement Portal — working model</text>
-  <text x="40" y="70" font-size="13" fill="#64748b">Two apps, one Vercel project. Frontend and backend communicate over HTTPS + a live WebSocket.</text>
+  <text x="40" y="70" font-size="13" fill="#64748b">Two apps, run locally. Frontend and backend communicate over HTTP + a live WebSocket.</text>
 
   <!-- Frontend -->
   <g>
     <rect x="40" y="120" width="230" height="130" rx="14" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
     <text x="155" y="160" font-size="16" font-weight="700" fill="#3730a3" text-anchor="middle">Frontend</text>
     <text x="155" y="182" font-size="12.5" fill="#4338ca" text-anchor="middle">React 18 + Vite</text>
-    <text x="155" y="200" font-size="12.5" fill="#4338ca" text-anchor="middle">static build, served by Vercel</text>
+    <text x="155" y="200" font-size="12.5" fill="#4338ca" text-anchor="middle">Vite dev server, localhost:5173</text>
     <text x="155" y="224" font-size="11.5" fill="#6366f1" text-anchor="middle">Student · Recruiter · Admin UI</text>
   </g>
 
@@ -113,5 +113,5 @@
     <text x="700" y="472" font-size="11.5" fill="#94a3b8">Rejected / Withdrawn reachable from any stage</text>
   </g>
 
-  <text x="60" y="530" font-size="11.5" fill="#94a3b8">vercel.json routes /api/* to the backend service and everything else to the frontend service — one Vercel project, two builds.</text>
+  <text x="60" y="530" font-size="11.5" fill="#94a3b8">Frontend on :5173 calls the backend on :4000 directly — no deployment, both run locally.</text>
 </svg>

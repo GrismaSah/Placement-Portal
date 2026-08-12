@@ -65,7 +65,7 @@ const Bar = ({ label, value, total, hint }) => {
  * the numbers stay correct even if that field drifts.
  */
 const Analytics = () => {
-  const { data, isInitialLoading } = useQuery("/api/v1/tpo/analytics");
+  const { data, isInitialLoading } = useQuery("/api/v1/admin/analytics");
   const a = data?.analytics ?? {};
 
   const exportCsv = () => {

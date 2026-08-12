@@ -1,14 +1,12 @@
 /**
  * Role vocabulary and navigation.
  *
- * The three roles are named confusingly in the data model and it leaks into
- * the UI, so every human-facing label is produced here rather than inline:
+ * Every human-facing label is produced here rather than inline:
  *
- *   Student — applies to roles
- *   TNP     — "Training & Placement" coordinator, but functionally the
- *             RECRUITER: posts jobs and reviews applicants
- *   TPO     — Training & Placement Officer: the university administrator who
- *             approves recruiters and owns placement reporting
+ *   Student   — applies to roles
+ *   Recruiter — posts jobs and reviews applicants
+ *   Admin     — the placement office; approves recruiters and owns
+ *               placement reporting
  */
 
 import {
@@ -26,23 +24,23 @@ import {
 
 export const ROLES = {
   STUDENT: "Student",
-  RECRUITER: "TNP",
-  OFFICER: "TPO",
+  RECRUITER: "Recruiter",
+  OFFICER: "Admin",
 };
 
 export const roleLabel = (role) =>
   ({
     Student: "Student",
-    TNP: "Recruiter",
-    TPO: "Placement Officer",
+    Recruiter: "Recruiter",
+    Admin: "Placement Officer",
   })[role] ?? role ?? "";
 
-/** The longer form, used where the acronym still needs explaining. */
+/** The longer form, used where the role still needs explaining. */
 export const roleLabelLong = (role) =>
   ({
     Student: "Student",
-    TNP: "Recruiter (TNP)",
-    TPO: "Placement Officer (TPO)",
+    Recruiter: "Recruiter",
+    Admin: "Placement Officer (Admin)",
   })[role] ?? role ?? "";
 
 export const isStudent = (user) => user?.role === ROLES.STUDENT;
@@ -70,9 +68,9 @@ export const navFor = (role) => {
 
   if (role === ROLES.RECRUITER) {
     // A recruiter's own workflow is applicants + postings, not browsing every
-    // other company's openings — /api/v1/application/TNP/getall now supports
-    // an omitted jobId for exactly this: every applicant across every job
-    // this TNP owns, in one table (see AllApplicants.jsx).
+    // other company's openings — /api/v1/application/recruiter/getall now
+    // supports an omitted jobId for exactly this: every applicant across
+    // every job this recruiter owns, in one table (see AllApplicants.jsx).
     return [
       ...common,
       { to: "/app/applicants", label: "Applicants", icon: FiUsers },
@@ -101,6 +99,6 @@ export const homeFor = () => "/app/dashboard";
 
 export const ROLE_ICONS = {
   Student: FiUser,
-  TNP: FiBriefcase,
-  TPO: FiCheckSquare,
+  Recruiter: FiBriefcase,
+  Admin: FiCheckSquare,
 };

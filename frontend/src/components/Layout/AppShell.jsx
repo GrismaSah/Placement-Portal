@@ -84,8 +84,8 @@ const AppShell = () => {
   }, [drawerOpen]);
 
   const handleLogout = async () => {
-    // TPOs live in a separate collection with their own logout handler.
-    const endpoint = user?.role === "TPO" ? "/api/v1/tpo/logout" : "/api/v1/user/logout";
+    // Admins live in a separate collection with their own logout handler.
+    const endpoint = user?.role === "Admin" ? "/api/v1/admin/logout" : "/api/v1/user/logout";
     try {
       const { data } = await api.get(endpoint);
       toast.success(data.message || "Signed out");

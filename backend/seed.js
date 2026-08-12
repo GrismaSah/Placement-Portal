@@ -4,18 +4,19 @@
  *   npm run seed
  *
  * Safe to re-run. Accounts are matched by email and updated in place, so _ids
- * survive and any jobs/applications already posted by the demo TNP stay linked.
- * The three pre-existing real accounts in JAIN_PLACEMENT are never touched.
+ * survive and any jobs/applications already posted by the demo recruiter stay
+ * linked. The three pre-existing real accounts in JAIN_PLACEMENT are never
+ * touched.
  *
- * Re-run this whenever you need to log in as TNP or TPO again: a successful
- * login clears the stored verification code, and with no SMTP configured there
- * is no way to receive a new one.
+ * Re-run this whenever you need to log in as Recruiter or Admin again: a
+ * successful login clears the stored verification code, and with no SMTP
+ * configured there is no way to receive a new one.
  */
 import mongoose from "mongoose";
 import { config } from "dotenv";
 
 import { User } from "./models/userSchema.js";
-import { TPO } from "./models/tpoModel.js";
+import { Admin } from "./models/adminModel.js";
 
 config({ path: ".env" });
 
@@ -37,7 +38,7 @@ const users = [
     name: "Test Recruiter",
     email: "tnp@jain.test",
     password: "Recruiter@123",
-    role: "TNP",
+    role: "Recruiter",
     enrollment: "",
     address: "Bangalore, Karnataka",
     phone: 9000000020,
@@ -49,7 +50,7 @@ const users = [
     name: "Pending Recruiter",
     email: "tnp.pending@jain.test",
     password: "Recruiter@123",
-    role: "TNP",
+    role: "Recruiter",
     enrollment: "",
     address: "Bangalore, Karnataka",
     phone: 9000000021,
@@ -59,10 +60,10 @@ const users = [
   },
 ];
 
-const tpos = [
+const admins = [
   {
     firstname: "Test",
-    lastname: "TPO",
+    lastname: "Admin",
     email: "tpo@jain.test",
     password: "Admin@123",
     phone: "9000000030",
@@ -96,12 +97,12 @@ const run = async () => {
     );
   }
 
-  for (const t of tpos) {
-    const { action } = await upsert(TPO, t);
-    console.log(`  ${action}  TPO     ${t.email}`);
+  for (const a of admins) {
+    const { action } = await upsert(Admin, a);
+    console.log(`  ${action}  Admin   ${a.email}`);
   }
 
-  console.log(`\nVerification code for TNP + TPO logins: ${VERIFICATION_CODE}`);
+  console.log(`\nVerification code for Recruiter + Admin logins: ${VERIFICATION_CODE}`);
   console.log("Student login needs no code.");
 
   await mongoose.disconnect();

@@ -8,7 +8,7 @@ import { User } from "../models/userSchema.js";
  *
  * The portal previously had a single aggregate endpoint (job counts by
  * category and company) and no placement reporting of any kind — no placement
- * rate, no package figures, no branch-wise outcomes. The TPO, the most senior
+ * rate, no package figures, no branch-wise outcomes. The Admin, the most senior
  * role, had six endpoints and one screen.
  *
  * "Placed" is derived from applications rather than from the denormalised

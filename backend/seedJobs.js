@@ -1,7 +1,7 @@
 /**
  * Seeds the job board with a realistic spread of openings.
  *
- *   npm run seed        (runs seed.js first — this needs the approved TNP to exist)
+ *   npm run seed        (runs seed.js first — this needs the approved Recruiter to exist)
  *   npm run seed:jobs   (jobs only)
  *
  * Safe to re-run: jobs are matched on {company, title} and updated in place, so
@@ -94,10 +94,10 @@ const run = async () => {
   await mongoose.connect(process.env.MONGO_URI, { dbName: "JAIN_PLACEMENT" });
   console.log(`Connected to ${mongoose.connection.db.databaseName}\n`);
 
-  const owner = await User.findOne({ email: OWNER_EMAIL, role: "TNP" });
+  const owner = await User.findOne({ email: OWNER_EMAIL, role: "Recruiter" });
   if (!owner) {
     throw new Error(
-      `Seed owner ${OWNER_EMAIL} not found. Run "npm run seed" first — jobs need an approved TNP for postedBy.`
+      `Seed owner ${OWNER_EMAIL} not found. Run "npm run seed" first — jobs need an approved Recruiter for postedBy.`
     );
   }
 

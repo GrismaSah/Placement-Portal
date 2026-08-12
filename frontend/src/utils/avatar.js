@@ -9,7 +9,7 @@
 export const displayName = (user) => {
   if (!user) return "";
   if (user.name) return user.name;
-  // TPO records use firstname/lastname rather than a single name field.
+  // Admin records use firstname/lastname rather than a single name field.
   return [user.firstname, user.lastname].filter(Boolean).join(" ");
 };
 
@@ -46,10 +46,10 @@ export const avatarColors = (user) => {
   };
 };
 
-/** Human label for a role, including the TNP/TPO naming that confuses everyone. */
+/** Human label for a role. */
 export const roleLabel = (role) => {
-  if (role === "TNP") return "Recruiter (TNP)";
-  if (role === "TPO") return "Placement Officer (TPO)";
+  if (role === "Recruiter") return "Recruiter";
+  if (role === "Admin") return "Placement Officer";
   if (role === "Student") return "Student";
   return role || "";
 };

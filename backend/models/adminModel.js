@@ -6,7 +6,7 @@ import { env } from "../config/env.js";
 import validator from "validator";
 
 
-const tpoSchema = new mongoose.Schema(
+const adminSchema = new mongoose.Schema(
   {
     firstname: { type: String, required: true, trim: true },
     lastname: { type: String, required: true, trim: true },
@@ -37,22 +37,22 @@ const tpoSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-tpoSchema.pre("save", async function (next) {
+adminSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
 // Compare password method
-tpoSchema.methods.comparePassword = async function (enteredPassword) {
+adminSchema.methods.comparePassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-tpoSchema.methods.getJWTToken = function () {
+adminSchema.methods.getJWTToken = function () {
   return jwt.sign({ id: this._id }, env("JWT_SECRET_KEY"), {
     expiresIn: env("JWT_EXPIRE", "7d"),
   });
 };
 
 
-export const TPO = mongoose.model("TPO", tpoSchema);
+export const Admin = mongoose.model("Admin", adminSchema);

@@ -1,4 +1,4 @@
-import { TPO } from "../models/tpoModel.js";
+import { Admin } from "../models/adminModel.js";
 import { User } from "../models/userSchema.js";
 import { catchAsyncErrors } from "./catchAsyncError.js";
 import ErrorHandler from "./error.js";
@@ -25,7 +25,7 @@ export const isAuthenticated = catchAsyncErrors(async (req, res, next) => {
   const user = await User.findById(decoded.id).select("-password -verificationCode");
 
   // A token can be structurally valid and still reference a deleted account,
-  // or belong to a TPO (who lives in a different collection). Previously
+  // or belong to an Admin (who lives in a different collection). Previously
   // req.user was simply set to null and every downstream controller crashed
   // on `req.user.role` with a 500.
   if (!user) {
@@ -36,21 +36,21 @@ export const isAuthenticated = catchAsyncErrors(async (req, res, next) => {
   next();
 });
 
-export const isAuthenticatedTPO = catchAsyncErrors(async (req, res, next) => {
+export const isAuthenticatedAdmin = catchAsyncErrors(async (req, res, next) => {
   const decoded = decodeToken(req);
   if (!decoded?.id) {
     return next(new ErrorHandler("User Not Authorized", 401));
   }
 
-  const tpo = await TPO.findById(decoded.id).select("-password -verificationCode");
-  if (!tpo) {
+  const admin = await Admin.findById(decoded.id).select("-password -verificationCode");
+  if (!admin) {
     return next(new ErrorHandler("User Not Authorized", 401));
   }
 
-  // The TPO schema has no `role` field; it is attached at request time so the
-  // rest of the stack can treat all three roles uniformly.
-  tpo.role = "TPO";
-  req.user = tpo;
+  // The Admin schema has no `role` field; it is attached at request time so
+  // the rest of the stack can treat all three roles uniformly.
+  admin.role = "Admin";
+  req.user = admin;
   next();
 });
 
@@ -73,14 +73,14 @@ export const attachUser = catchAsyncErrors(async (req, res, next) => {
   next();
 });
 
-/** Non-throwing counterpart to isAuthenticatedTPO — see attachUser. */
-export const attachTPO = catchAsyncErrors(async (req, res, next) => {
+/** Non-throwing counterpart to isAuthenticatedAdmin — see attachUser. */
+export const attachAdmin = catchAsyncErrors(async (req, res, next) => {
   const decoded = decodeToken(req);
-  const tpo = decoded?.id
-    ? await TPO.findById(decoded.id).select("-password -verificationCode")
+  const admin = decoded?.id
+    ? await Admin.findById(decoded.id).select("-password -verificationCode")
     : null;
-  if (tpo) tpo.role = "TPO";
-  req.user = tpo;
+  if (admin) admin.role = "Admin";
+  req.user = admin;
   next();
 });
 
@@ -103,10 +103,10 @@ export const isAuthenticatedAny = catchAsyncErrors(async (req, res, next) => {
     return next();
   }
 
-  const tpo = await TPO.findById(decoded.id).select("-password -verificationCode");
-  if (tpo) {
-    tpo.role = "TPO";
-    req.user = tpo;
+  const admin = await Admin.findById(decoded.id).select("-password -verificationCode");
+  if (admin) {
+    admin.role = "Admin";
+    req.user = admin;
     return next();
   }
 

@@ -13,7 +13,7 @@ import ResumeSection from "./ResumeSection";
 /**
  * Account settings, and — for students — the resume builder.
  *
- * TPO records live in a separate collection with firstname/lastname instead of
+ * Admin records live in a separate collection with firstname/lastname instead of
  * a single name, and their own update endpoint, so both shapes are handled
  * here rather than in two near-identical screens.
  */
@@ -87,7 +87,7 @@ const Profile = () => {
     e.preventDefault();
     setSavingDetails(true);
 
-    const endpoint = officer ? "/api/v1/tpo/update-profile" : "/api/v1/user/update-profile";
+    const endpoint = officer ? "/api/v1/admin/update-profile" : "/api/v1/user/update-profile";
     const payload = officer
       ? {
           firstname: details.firstname,
@@ -129,7 +129,7 @@ const Profile = () => {
     }
 
     setSavingPassword(true);
-    const endpoint = officer ? "/api/v1/tpo/update-password" : "/api/v1/user/update-password";
+    const endpoint = officer ? "/api/v1/admin/update-password" : "/api/v1/user/update-password";
 
     try {
       await api.post(endpoint, {

@@ -51,7 +51,7 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     required: [true, "Please select a role"],
-    enum: ["Student", "TNP"],
+    enum: ["Student", "Recruiter"],
   },
   isVerified: {
     type: Boolean,
@@ -65,10 +65,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ["Pending", "Approved", "Declined"],
     default: function () {
-      return this.role === "TNP" ? "Pending" : undefined;
+      return this.role === "Recruiter" ? "Pending" : undefined;
     },
     required: function () {
-      return this.role === "TNP";
+      return this.role === "Recruiter";
     },
   },
 
@@ -116,7 +116,7 @@ userSchema.index({ email: 1 }, { unique: true });
 // Nothing previously stopped two accounts from sharing one enrollment
 // number — two different emails could both register as "23BTRCN001". Partial
 // (not a plain unique index) because `enrollment` only means anything for
-// Student accounts; a TNP/recruiter document has no enrollment field at all,
+// Student accounts; a Recruiter document has no enrollment field at all,
 // and a plain unique index would treat every one of those missing values as
 // a duplicate of each other after the first.
 userSchema.index(
@@ -124,8 +124,8 @@ userSchema.index(
   { unique: true, partialFilterExpression: { role: "Student" } }
 );
 
-// Supports the placement dashboard's branch/batch breakdowns and the TNP
-// approval queue.
+// Supports the placement dashboard's branch/batch breakdowns and the
+// recruiter approval queue.
 userSchema.index({ role: 1, status: 1 });
 userSchema.index({ role: 1, branch: 1, batch: 1 });
 

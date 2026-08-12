@@ -28,8 +28,8 @@ import OtpInput from "./OtpInput";
 
 const ALL_ROLES = [
   { value: "Student", label: "Student", icon: FiUser },
-  { value: "TNP", label: "Recruiter", icon: FiBriefcase },
-  { value: "TPO", label: "Placement Officer", icon: FiCheckSquare },
+  { value: "Recruiter", label: "Recruiter", icon: FiBriefcase },
+  { value: "Admin", label: "Placement Officer", icon: FiCheckSquare },
 ];
 
 const Login = ({ allowedRoles = ["Student"] }) => {
@@ -48,8 +48,8 @@ const Login = ({ allowedRoles = ["Student"] }) => {
   const [error, setError] = useState("");
   const [cooldown, setCooldown] = useState(0);
 
-  const isTPO = role === "TPO";
-  const base = isTPO ? "/api/v1/tpo" : "/api/v1/user";
+  const isAdmin = role === "Admin";
+  const base = isAdmin ? "/api/v1/admin" : "/api/v1/user";
 
   // Resend cooldown, so the button cannot be hammered.
   useEffect(() => {
@@ -69,7 +69,7 @@ const Login = ({ allowedRoles = ["Student"] }) => {
     setLoading(true);
 
     try {
-      const payload = isTPO
+      const payload = isAdmin
         ? { email, password, verificationCode: code }
         : { email, password, role };
 
@@ -93,7 +93,7 @@ const Login = ({ allowedRoles = ["Student"] }) => {
       // A recruiter's code is cleared on use, so a second sign-in legitimately
       // needs a new one. Move them straight to the code step instead of
       // showing an error they cannot act on.
-      if (/verification code/i.test(message) && !isTPO) {
+      if (/verification code/i.test(message) && !isAdmin) {
         setStep("verify");
         setCooldown(0);
       }
@@ -110,9 +110,9 @@ const Login = ({ allowedRoles = ["Student"] }) => {
     setLoading(true);
 
     try {
-      if (isTPO || role === "TNP") {
+      if (isAdmin || role === "Recruiter") {
         // These roles verify as part of logging in, not through /verify.
-        const payload = isTPO
+        const payload = isAdmin
           ? { email, password, verificationCode: code }
           : { email, password, role, verificationCode: code };
         const { data } = await api.post(`${base}/login`, payload);
@@ -191,11 +191,11 @@ const Login = ({ allowedRoles = ["Student"] }) => {
       title: "Sign in",
       subtitle: "Welcome back to the JAIN Placement Portal.",
     },
-    TNP: {
+    Recruiter: {
       title: "Recruiter sign in",
       subtitle: "Post openings and manage your applicants.",
     },
-    TPO: {
+    Admin: {
       title: "Placement Officer sign in",
       subtitle: "Manage recruiter approvals and platform stats.",
     },
@@ -206,7 +206,7 @@ const Login = ({ allowedRoles = ["Student"] }) => {
       title={copy.title}
       subtitle={copy.subtitle}
       footer={
-        isTPO ? undefined : (
+        isAdmin ? undefined : (
           <>
             Don&rsquo;t have an account?{" "}
             <Link
@@ -293,7 +293,7 @@ const Login = ({ allowedRoles = ["Student"] }) => {
           </div>
         </div>
 
-        {isTPO && (
+        {isAdmin && (
           <div>
             <span className="mb-1.5 block text-sm font-medium text-[var(--text-primary)]">
               Verification code

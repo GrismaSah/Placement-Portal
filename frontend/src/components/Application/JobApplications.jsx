@@ -40,7 +40,7 @@ const NEXT_STAGE = {
 const JobApplications = () => {
   const { jobId } = useParams();
   const { data, isInitialLoading, refetch } = useQuery(
-    "/api/v1/application/TNP/getall",
+    "/api/v1/application/recruiter/getall",
     { params: { jobId } }
   );
 

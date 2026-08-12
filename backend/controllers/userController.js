@@ -2,7 +2,6 @@ import { catchAsyncErrors } from "../middlewares/catchAsyncError.js";
 import { User } from "../models/userSchema.js";
 import ErrorHandler from "../middlewares/error.js";
 import { clearTokenCookie, sendToken } from "../utils/jwtToken.js";
-import { TPO } from "../models/tpoModel.js";
 import { sendVerificationCode } from "../utils/verifyEmail/email.js";
 import { sentRegisteredEmail } from "../utils/registeredUser/register.js";
 import { emitProfileUpdate } from "../socket.js";
@@ -136,8 +135,8 @@ export const login = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Invalid Password.", 400));
   }
 
-  if (role === "TNP") {
-    // A TNP's code is nulled after every use (registration or previous
+  if (role === "Recruiter") {
+    // A Recruiter's code is nulled after every use (registration or previous
     // login), so a plain email+password submit never has one to check
     // against. Previously that fell straight into the mismatch branch below
     // and errored with "Invalid verification code" — which the frontend then
@@ -338,8 +337,8 @@ export const updateProfile = catchAsyncErrors(async (req, res, next) => {
 
   // Assign only these, field by field. Never Object.assign(user, req.body):
   // role, status, isVerified, email and password all live on this same
-  // document, so a blind merge would let a student PUT {role:"TNP",
-  // status:"Approved"} and promote themselves past the TPO approval flow.
+  // document, so a blind merge would let a student PUT {role:"Recruiter",
+  // status:"Approved"} and promote themselves past the Admin approval flow.
   const { name, phone, address, enrollment } = req.body;
 
   if (name !== undefined) user.name = name;

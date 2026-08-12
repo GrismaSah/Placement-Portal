@@ -157,7 +157,7 @@ export const getResumeFile = catchAsyncErrors(async (req, res, next) => {
     !isOwner &&
     (await Application.exists({
       "resume.fileId": fileId,
-      "TNPID.user": req.user._id,
+      "recruiterId.user": req.user._id,
     }));
 
   if (!isOwner && !isRecruiterForApplication) {

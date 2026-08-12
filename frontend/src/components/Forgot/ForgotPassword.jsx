@@ -21,15 +21,15 @@ const ForgotPassword = () => {
   const navigate = useNavigate();
 
   const roleParam = params.get("role");
-  const isTPO = roleParam === "tpo";
-  const base = isTPO ? "/api/v1/tpo" : "/api/v1/user";
+  const isAdmin = roleParam === "admin";
+  const base = isAdmin ? "/api/v1/admin" : "/api/v1/user";
   // Where "back to sign in" goes once the reset is done — the account types
   // live on different, unlinked login routes now (see Login.jsx), so this
   // has to route back to the same scoped page the reset was started from.
   const loginPath =
-    roleParam === "tpo"
+    roleParam === "admin"
       ? "/placement-office/login"
-      : roleParam === "tnp"
+      : roleParam === "recruiter"
         ? "/recruiter/login"
         : "/login";
 

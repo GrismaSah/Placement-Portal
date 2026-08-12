@@ -14,22 +14,22 @@ import { Avatar, Button, Card, EmptyState, Modal, Skeleton } from "../ui";
  * student body, so it now reads as a decision — full contact details, and a
  * confirmation step — rather than a dropdown that fires on change.
  */
-const TnpApprovals = () => {
-  const { data, isInitialLoading, refetch } = useQuery("/api/v1/tpo/pending-tnps");
-  const [action, setAction] = useState(null); // { tnp, decision }
+const RecruiterApprovals = () => {
+  const { data, isInitialLoading, refetch } = useQuery("/api/v1/admin/pending-recruiters");
+  const [action, setAction] = useState(null); // { recruiter, decision }
   const [busy, setBusy] = useState(false);
 
-  const pending = data?.pendingTNPs ?? [];
+  const pending = data?.pendingRecruiters ?? [];
 
   const decide = async () => {
     if (!action) return;
     setBusy(true);
     try {
-      await api.post("/api/v1/tpo/tnp-request", {
-        userId: action.tnp._id,
+      await api.post("/api/v1/admin/recruiter-request", {
+        userId: action.recruiter._id,
         action: action.decision,
       });
-      invalidate("/api/v1/tpo");
+      invalidate("/api/v1/admin");
       toast.success(
         action.decision === "Approved" ? "Recruiter approved" : "Recruiter declined"
       );
@@ -65,18 +65,18 @@ const TnpApprovals = () => {
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {pending.map((tnp) => (
-            <Card key={tnp._id}>
+          {pending.map((recruiter) => (
+            <Card key={recruiter._id}>
               <div className="flex items-start gap-3.5">
-                <Avatar user={tnp} size={48} />
+                <Avatar user={recruiter} size={48} />
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-[var(--text-primary)]">
-                    {tnp.name}
+                    {recruiter.name}
                   </p>
                   <p className="text-sm text-[var(--text-tertiary)]">
                     Requested{" "}
-                    {tnp.createdAt
-                      ? new Date(tnp.createdAt).toLocaleDateString("en-IN", {
+                    {recruiter.createdAt
+                      ? new Date(recruiter.createdAt).toLocaleDateString("en-IN", {
                           dateStyle: "medium",
                         })
                       : "recently"}
@@ -88,25 +88,25 @@ const TnpApprovals = () => {
                 <div className="flex items-center gap-2.5">
                   <FiMail aria-hidden="true" className="size-4 shrink-0 text-[var(--text-tertiary)]" />
                   <a
-                    href={`mailto:${tnp.email}`}
+                    href={`mailto:${recruiter.email}`}
                     className="truncate text-[var(--brand)] hover:underline"
                   >
-                    {tnp.email}
+                    {recruiter.email}
                   </a>
                 </div>
-                {tnp.phone && (
+                {recruiter.phone && (
                   <div className="flex items-center gap-2.5">
                     <FiPhone aria-hidden="true" className="size-4 shrink-0 text-[var(--text-tertiary)]" />
-                    <span className="text-[var(--text-secondary)]">{tnp.phone}</span>
+                    <span className="text-[var(--text-secondary)]">{recruiter.phone}</span>
                   </div>
                 )}
-                {tnp.address && (
+                {recruiter.address && (
                   <div className="flex items-start gap-2.5">
                     <FiMapPin
                       aria-hidden="true"
                       className="mt-0.5 size-4 shrink-0 text-[var(--text-tertiary)]"
                     />
-                    <span className="text-[var(--text-secondary)]">{tnp.address}</span>
+                    <span className="text-[var(--text-secondary)]">{recruiter.address}</span>
                   </div>
                 )}
               </dl>
@@ -116,7 +116,7 @@ const TnpApprovals = () => {
                   size="sm"
                   fullWidth
                   leadingIcon={<FiCheck />}
-                  onClick={() => setAction({ tnp, decision: "Approved" })}
+                  onClick={() => setAction({ recruiter, decision: "Approved" })}
                 >
                   Approve
                 </Button>
@@ -125,7 +125,7 @@ const TnpApprovals = () => {
                   fullWidth
                   variant="outline"
                   leadingIcon={<FiX />}
-                  onClick={() => setAction({ tnp, decision: "Declined" })}
+                  onClick={() => setAction({ recruiter, decision: "Declined" })}
                 >
                   Decline
                 </Button>
@@ -160,13 +160,13 @@ const TnpApprovals = () => {
         <p className="text-sm text-[var(--text-secondary)]">
           {action?.decision === "Approved" ? (
             <>
-              <strong className="text-[var(--text-primary)]">{action?.tnp?.name}</strong> will
+              <strong className="text-[var(--text-primary)]">{action?.recruiter?.name}</strong> will
               be able to post openings visible to every student, and to view applicant
               details and resumes.
             </>
           ) : (
             <>
-              <strong className="text-[var(--text-primary)]">{action?.tnp?.name}</strong> will
+              <strong className="text-[var(--text-primary)]">{action?.recruiter?.name}</strong> will
               not be able to post openings. They&rsquo;ll be notified by email.
             </>
           )}
@@ -176,4 +176,4 @@ const TnpApprovals = () => {
   );
 };
 
-export default TnpApprovals;
+export default RecruiterApprovals;

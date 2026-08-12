@@ -11,7 +11,7 @@ import { env, isProduction } from "./config/env.js";
 import userRouter from "./routes/userRoutes.js";
 import jobRouter from "./routes/jobRoutes.js";
 import applicationRouter from "./routes/applicationRoutes.js";
-import tpoRouter from "./routes/tpoRoutes.js";
+import adminRouter from "./routes/adminRoutes.js";
 import resumeRouter from "./routes/resumeRoutes.js";
 import notificationRouter from "./routes/notificationRoutes.js";
 
@@ -99,7 +99,7 @@ app.get("/api/health", (req, res) =>
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/job", jobRouter);
 app.use("/api/v1/application", applicationRouter);
-app.use("/api/v1/tpo", tpoRouter);
+app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/resume", resumeRouter);
 app.use("/api/v1/notification", notificationRouter);
 

@@ -44,7 +44,7 @@ import PostJob from "./components/Job/PostJob";
 import MyJobs from "./components/Job/MyJobs";
 import JobApplications from "./components/Application/JobApplications";
 import AllApplicants from "./components/Application/AllApplicants";
-import TnpApprovals from "./components/Officer/TnpApprovals";
+import RecruiterApprovals from "./components/Officer/RecruiterApprovals";
 import Analytics from "./components/Officer/Analytics";
 import Students from "./components/Officer/Students";
 import NotFound from "./components/NotFound/NotFound";
@@ -61,15 +61,16 @@ const App = () => {
         const response = await api.get("/api/v1/user/getuser");
         let user = response.data.user;
 
-        // A TPO's token verifies against a different collection, so /getuser
-        // resolves to null for them. That null is the signal to try /tpo/me.
-        // Both endpoints answer "is there a session?" with 200 + user: null
-        // rather than a 401 — there being no session yet is the normal state
-        // on first load, not an error — so authorization now has to be
-        // decided from the payload instead of from a caught exception.
+        // An Admin's token verifies against a different collection, so
+        // /getuser resolves to null for them. That null is the signal to try
+        // /admin/me. Both endpoints answer "is there a session?" with
+        // 200 + user: null rather than a 401 — there being no session yet is
+        // the normal state on first load, not an error — so authorization
+        // now has to be decided from the payload instead of from a caught
+        // exception.
         if (user === null) {
-          const tpo = await api.get("/api/v1/tpo/me");
-          user = tpo.data.user;
+          const admin = await api.get("/api/v1/admin/me");
+          user = admin.data.user;
         }
 
         setUser(user);
@@ -134,7 +135,7 @@ const App = () => {
           path="/recruiter/login"
           element={
             <PublicOnlyRoute>
-              <Login allowedRoles={["TNP"]} />
+              <Login allowedRoles={["Recruiter"]} />
             </PublicOnlyRoute>
           }
         />
@@ -142,7 +143,7 @@ const App = () => {
           path="/placement-office/login"
           element={
             <PublicOnlyRoute>
-              <Login allowedRoles={["TPO"]} />
+              <Login allowedRoles={["Admin"]} />
             </PublicOnlyRoute>
           }
         />
@@ -236,7 +237,7 @@ const App = () => {
             path="approvals"
             element={
               <RoleRoute allow={[ROLES.OFFICER]}>
-                <TnpApprovals />
+                <RecruiterApprovals />
               </RoleRoute>
             }
           />

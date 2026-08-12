@@ -103,7 +103,7 @@ export const postJob = catchAsyncErrors(async (req, res, next) => {
   // The Pending/Approved/Declined gate was decorative: only the Student check
   // above existed, so a recruiter who had never been approved — or had been
   // explicitly declined — could post jobs to the whole student body.
-  if (role === "TNP" && status !== "Approved") {
+  if (role === "Recruiter" && status !== "Approved") {
     return next(
       new ErrorHandler(
         status === "Declined"
@@ -249,7 +249,7 @@ export const updateJob = catchAsyncErrors(async (req, res, next) => {
   // Ownership: any authenticated recruiter could previously edit any job in
   // the system — including changing another company's salary or description —
   // simply by knowing its id.
-  if (role === "TNP" && String(job.postedBy) !== String(req.user._id)) {
+  if (role === "Recruiter" && String(job.postedBy) !== String(req.user._id)) {
     return next(new ErrorHandler("You can only edit your own postings.", 403));
   }
 
@@ -283,7 +283,7 @@ export const deleteJob = catchAsyncErrors(async (req, res, next) => {
   }
 
   // Ownership: without this any recruiter could delete any posting.
-  if (role === "TNP" && String(job.postedBy) !== String(req.user._id)) {
+  if (role === "Recruiter" && String(job.postedBy) !== String(req.user._id)) {
     return next(new ErrorHandler("You can only delete your own postings.", 403));
   }
 

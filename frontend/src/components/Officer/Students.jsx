@@ -33,7 +33,7 @@ const Students = () => {
     return () => clearTimeout(t);
   }, [search]);
 
-  const { data, isInitialLoading } = useQuery("/api/v1/tpo/students", {
+  const { data, isInitialLoading } = useQuery("/api/v1/admin/students", {
     params: { search: debounced, page, limit: 20 },
   });
 

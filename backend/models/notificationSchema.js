@@ -21,10 +21,10 @@ const notificationSchema = new mongoose.Schema(
     },
 
     // Which collection `user` points at. Students and recruiters live in
-    // `users`, placement officers in `tpos`, so the id alone is ambiguous.
+    // `users`, placement officers in `admins`, so the id alone is ambiguous.
     userModel: {
       type: String,
-      enum: ["User", "TPO"],
+      enum: ["User", "Admin"],
       default: "User",
     },
 

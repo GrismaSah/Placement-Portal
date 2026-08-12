@@ -22,7 +22,7 @@ import {
 } from "../ui";
 
 /**
- * Recruiter (TNP) home.
+ * Recruiter home.
  *
  * Note the approval banner: a recruiter whose account is still Pending can
  * currently post jobs anyway, because the backend only blocks role === Student.

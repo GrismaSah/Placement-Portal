@@ -52,7 +52,7 @@ const applicationSchema = new mongoose.Schema({
       required: true,
     },
   },
-  TNPID: {
+  recruiterId: {
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -60,7 +60,7 @@ const applicationSchema = new mongoose.Schema({
     },
     role: {
       type: String,
-      enum: ["TNP"],
+      enum: ["Recruiter"],
       required: true,
     },
   },

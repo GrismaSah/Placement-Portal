@@ -32,9 +32,9 @@ const TRANSITIONS = {
 export const postApplication = catchAsyncErrors(async (req, res, next) => {
   const { role } = req.user;
 
-  if (role === "TNP") {
+  if (role === "Recruiter") {
     return next(
-      new ErrorHandler("TNP not allowed to access this resource.", 400)
+      new ErrorHandler("Recruiters not allowed to access this resource.", 400)
     );
   }
 
@@ -92,9 +92,9 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Job not found!", 404));
   }
 
-  const TNPID = {
+  const recruiterId = {
     user: jobDetails.postedBy,
-    role: "TNP",
+    role: "Recruiter",
   };
 
   if (
@@ -104,7 +104,7 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
     !phone ||
     !address ||
     !applicantID ||
-    !TNPID ||
+    !recruiterId ||
     !resume ||
     !enrollment
   ) {
@@ -133,7 +133,7 @@ export const postApplication = catchAsyncErrors(async (req, res, next) => {
     enrollment,
     address,
     applicantID,
-    TNPID,
+    recruiterId,
     jobId,
     resume,
     status: "Applied",
@@ -187,7 +187,7 @@ export const updateApplicationStatus = catchAsyncErrors(async (req, res, next) =
 
   // Ownership: a recruiter may only act on applications to their own postings.
   // The placement office may act on any.
-  if (role === "TNP" && String(application.jobId?.postedBy) !== String(_id)) {
+  if (role === "Recruiter" && String(application.jobId?.postedBy) !== String(_id)) {
     return next(
       new ErrorHandler("You can only update applications to your own postings.", 403)
     );
@@ -250,7 +250,7 @@ export const updateApplicationStatus = catchAsyncErrors(async (req, res, next) =
   });
 });
 
-export const TNPGetAllApplications = catchAsyncErrors(
+export const recruiterGetAllApplications = catchAsyncErrors(
   async (req, res, next) => {
     const { role } = req.user;
     if (role === "Student") {
@@ -262,11 +262,11 @@ export const TNPGetAllApplications = catchAsyncErrors(
     const { _id } = req.user;
 
     if (!jobId) {
-      // A TNP with no jobId gets every applicant across their own postings —
-      // still scoped to jobs they own. Any other role (TPO) still needs an
-      // explicit jobId; without a jobId this used to return every
-      // application in the database.
-      if (role !== "TNP") {
+      // A Recruiter with no jobId gets every applicant across their own
+      // postings — still scoped to jobs they own. Any other role (Admin)
+      // still needs an explicit jobId; without a jobId this used to return
+      // every application in the database.
+      if (role !== "Recruiter") {
         return next(new ErrorHandler("A jobId is required.", 400));
       }
 
@@ -289,7 +289,7 @@ export const TNPGetAllApplications = catchAsyncErrors(
     // Ownership: previously any authenticated recruiter could read the
     // applicants — names, phone numbers, addresses and resumes — for any job
     // in the system just by passing its id.
-    if (role === "TNP" && String(job.postedBy) !== String(_id)) {
+    if (role === "Recruiter" && String(job.postedBy) !== String(_id)) {
       return next(
         new ErrorHandler("You can only view applicants for your own postings.", 403)
       );
@@ -308,9 +308,9 @@ export const TNPGetAllApplications = catchAsyncErrors(
 export const jobseekerGetAllApplications = catchAsyncErrors(
   async (req, res, next) => {
     const { role } = req.user;
-    if (role === "TNP") {
+    if (role === "Recruiter") {
       return next(
-        new ErrorHandler("TNP not allowed to access this resource.", 400)
+        new ErrorHandler("Recruiters not allowed to access this resource.", 400)
       );
     }
     const { _id } = req.user;
@@ -330,9 +330,9 @@ export const jobseekerGetAllApplications = catchAsyncErrors(
 export const jobseekerDeleteApplication = catchAsyncErrors(
   async (req, res, next) => {
     const { role } = req.user;
-    if (role === "TNP") {
+    if (role === "Recruiter") {
       return next(
-        new ErrorHandler("TNP not allowed to access this resource.", 400)
+        new ErrorHandler("Recruiters not allowed to access this resource.", 400)
       );
     }
     const { id } = req.params;

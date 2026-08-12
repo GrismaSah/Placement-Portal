@@ -6,7 +6,7 @@ import Button from "./Button";
  *
  * Every list in the app gets one. An empty result set is a normal outcome, not
  * an error — the old portal rendered a bare blank area for no jobs and the
- * backend even returned 404 for an empty TNP approval queue, which forced the
+ * backend even returned 404 for an empty recruiter approval queue, which forced the
  * happy path through an error handler.
  *
  * Each one should say what happened, why, and what to do next.

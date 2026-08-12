@@ -22,7 +22,7 @@ import OtpInput from "./OtpInput";
  * Account creation for students and recruiters.
  *
  * Placement Officer accounts are deliberately NOT self-service here. The old
- * /tpo/register endpoint let anyone on the internet create an administrator
+ * /admin/register endpoint let anyone on the internet create an administrator
  * account with authority over every recruiter on the platform; removing the
  * route from the UI is the first half of closing that, and the endpoint itself
  * should be locked down before this ships publicly.
@@ -36,7 +36,7 @@ const ROLES = [
     blurb: "Apply to roles and track your applications.",
   },
   {
-    value: "TNP",
+    value: "Recruiter",
     label: "Recruiter",
     icon: FiBriefcase,
     blurb: "Post openings and review applicants.",
@@ -210,7 +210,7 @@ const Register = () => {
         <>
           Already have an account?{" "}
           <Link
-            to={role === "TNP" ? "/recruiter/login" : "/login"}
+            to={role === "Recruiter" ? "/recruiter/login" : "/login"}
             className="font-semibold text-[var(--brand)] hover:underline"
           >
             Sign in
@@ -373,7 +373,7 @@ const Register = () => {
           Create account
         </Button>
 
-        {role === "TNP" && (
+        {role === "Recruiter" && (
           <p className="text-center text-xs text-[var(--text-tertiary)]">
             Recruiter accounts are reviewed by the Placement Office before postings go
             live.

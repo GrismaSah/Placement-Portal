@@ -25,7 +25,7 @@ export const formatINR = (n) => {
 /**
  * Placement Officer home.
  *
- * The TPO previously had six endpoints and a single screen — a recruiter
+ * The Admin previously had six endpoints and a single screen — a recruiter
  * approval queue — despite being the most senior role. This is the oversight
  * view: placement rate, packages, and what needs a decision today.
  */
@@ -35,15 +35,15 @@ const OfficerDashboard = ({ user }) => {
 
   useEffect(() => {
     api
-      .get("/api/v1/tpo/analytics")
+      .get("/api/v1/admin/analytics")
       .then(({ data }) => setAnalytics(data.analytics ?? data))
       .catch(() => setAnalytics({}));
 
     api
-      .get("/api/v1/tpo/pending-tnps")
+      .get("/api/v1/admin/pending-recruiters")
       // The endpoint 404s when the queue is empty, so "no pending recruiters"
       // arrives through the error path. Treat it as the empty list it is.
-      .then(({ data }) => setPending(data.pendingTNPs ?? data.users ?? []))
+      .then(({ data }) => setPending(data.pendingRecruiters ?? data.users ?? []))
       .catch(() => setPending([]));
   }, []);
 
@@ -175,12 +175,12 @@ const OfficerDashboard = ({ user }) => {
             />
           ) : (
             <ul className="divide-y divide-[var(--border)]">
-              {pending.slice(0, 5).map((tnp) => (
-                <li key={tnp._id} className="py-3">
+              {pending.slice(0, 5).map((recruiter) => (
+                <li key={recruiter._id} className="py-3">
                   <p className="truncate font-medium text-[var(--text-primary)]">
-                    {tnp.name}
+                    {recruiter.name}
                   </p>
-                  <p className="truncate text-sm text-[var(--text-tertiary)]">{tnp.email}</p>
+                  <p className="truncate text-sm text-[var(--text-tertiary)]">{recruiter.email}</p>
                 </li>
               ))}
             </ul>

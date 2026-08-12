@@ -1,14 +1,14 @@
 import transporter from "./email.config.js";
-import { ApprovalTnpRequestTemplate, DeclineTnpRequestTemplate } from "./emailTemplate/tnpStatusTemplate.js";
+import { ApprovalRecruiterRequestTemplate, DeclineRecruiterRequestTemplate } from "./emailTemplate/recruiterStatusTemplate.js";
 import { BRANDING } from "../config/branding.js";
 
-export const sendTnpStatusEmailApproved = async (doc) => {
+export const sendRecruiterStatusEmailApproved = async (doc) => {
   const mailOptions = {
     from: `"${BRANDING.sender}" <${process.env.NODEMAIL_EMAIL}>`,
     to: doc.email,
     subject: "Your recruiter account is approved",
     text: `Dear ${doc.name},\n\nThe ${BRANDING.office} has approved your recruiter account. You can now post openings and review applicants.\n\nBest regards,\n${BRANDING.office}`,
-    html: ApprovalTnpRequestTemplate(doc.name),
+    html: ApprovalRecruiterRequestTemplate(doc.name),
   };
   try {
     await transporter.sendMail(mailOptions);
@@ -19,13 +19,13 @@ export const sendTnpStatusEmailApproved = async (doc) => {
 };
 
 
-export const sendTnpStatusEmailDeclined = async (doc) => {
+export const sendRecruiterStatusEmailDeclined = async (doc) => {
   const mailOptions = {
     from: `"${BRANDING.sender}" <${process.env.NODEMAIL_EMAIL}>`,
     to: doc.email,
     subject: "About your recruiter account",
     text: `Dear ${doc.name},\n\nAfter review, the ${BRANDING.office} is not able to approve your recruiter account at this time. Please contact ${BRANDING.supportEmail} for further clarification.\n\nBest regards,\n${BRANDING.office}`,
-    html: DeclineTnpRequestTemplate(doc.name),
+    html: DeclineRecruiterRequestTemplate(doc.name),
   };
   try {
     await transporter.sendMail(mailOptions);
@@ -34,4 +34,3 @@ export const sendTnpStatusEmailDeclined = async (doc) => {
     console.error("Error sending decline email:", error);
   }
 };
-

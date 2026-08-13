@@ -20,7 +20,7 @@ Application pipeline: `Applied → Shortlisted → Interview → Offered → Pla
 
 Two independent apps in one repository. In local dev they run side by side; in production they're built and served as a single Vercel project.
 
-![Architecture — how the pieces fit together](docs/architecture.svg)
+![Architecture — how the pieces fit together](docs/architecture.png)
 
 - **Frontend** — React 18 + Vite dev server locally; static build served by Vercel in production.
 - **Backend** — Express REST API. `server.js` runs it as a long-lived process locally, which is also what Socket.IO needs to work. In production, `backend/app.js` is instead loaded through `api/index.js` as a single Vercel serverless function — Socket.IO does not run there.
@@ -35,7 +35,7 @@ placement-portal/
 ├── backend/              # Express API — see backend/README.md
 ├── frontend/             # React + Vite client
 ├── docs/
-│   └── architecture.svg  # the diagram above
+│   └── architecture.png  # the diagram above
 ├── .env.example          # env var template — copy into backend/.env
 └── package.json          # workspace-root convenience scripts only
 ```

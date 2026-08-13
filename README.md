@@ -93,15 +93,7 @@ npm run dev:frontend            # in a second terminal, starts the frontend on :
 
 Ports are fixed — the frontend hardcodes `http://localhost:4000` for API calls, so the backend must run on `4000` and the frontend on `5173`.
 
-### Demo accounts (after `npm run seed`)
-
-| Role | Email | Password | Code |
-|---|---|---|---|
-| Student | `student@jain.test` | `Student@123` | — |
-| Recruiter | `tnp@jain.test` | `Recruiter@123` | `123456` |
-| Admin | `tpo@jain.test` | `Admin@123` | `123456` |
-
-Recruiter and Admin logins require a fresh emailed verification code every sign-in; with no SMTP configured, use the fixed seed code above instead of requesting a new one.
+Recruiter and Admin logins require a fresh emailed verification code every sign-in; with no SMTP configured, use the fixed seed code from `npm run seed` instead of requesting a new one.
 
 ## API surface
 

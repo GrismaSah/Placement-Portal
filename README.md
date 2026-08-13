@@ -80,7 +80,7 @@ frontend/src/
 Requires Node 18+ and a MongoDB Atlas connection string.
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/GrismaSah/Placement-Portal.git
 cd placement-portal
 npm --prefix backend install
 npm --prefix frontend install

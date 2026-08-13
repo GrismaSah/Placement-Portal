@@ -18,12 +18,12 @@ Application pipeline: `Applied → Shortlisted → Interview → Offered → Pla
 
 ## Architecture
 
-Two independent apps in one repository, run locally side by side.
+Two independent apps in one repository. In local dev they run side by side; in production they're built and served as a single Vercel project.
 
 ![Architecture — how the pieces fit together](docs/architecture.svg)
 
-- **Frontend** — React 18 + Vite dev server.
-- **Backend** — Express REST API. `server.js` runs it as a long-lived process, which is also what Socket.IO needs to work.
+- **Frontend** — React 18 + Vite dev server locally; static build served by Vercel in production.
+- **Backend** — Express REST API. `server.js` runs it as a long-lived process locally, which is also what Socket.IO needs to work. In production, `backend/app.js` is instead loaded through `api/index.js` as a single Vercel serverless function — Socket.IO does not run there.
 - **Database** — MongoDB Atlas, single database `JAIN_PLACEMENT`, three account-bearing collections (`users` for Students/Recruiters, `admins` for the placement office, plus a `studentallowlists` roster of valid enrollment numbers).
 - **File storage** — resumes live in MongoDB GridFS, not on disk.
 - **Auth** — JWT in an httpOnly cookie, one token format shared across all three roles; middleware resolves which collection (`users` vs `admins`) a token belongs to.
@@ -118,4 +118,13 @@ All routes are mounted under `/api/v1/`:
 
 ## Deployment
 
-Not deployed anywhere — this project runs locally only. See [Getting started](#getting-started) above.
+Live at **[jainplacements.vercel.app](https://jainplacements.vercel.app)**.
+
+Deployed as a single Vercel project:
+
+- **Frontend** — React 18 + Vite, built to static assets and served directly.
+- **Backend** — the Express app (`backend/app.js`) runs as one Vercel serverless function via `api/index.js`; `/api/:path*` rewrites to it, everything else falls back to `index.html` for client-side routing.
+- **Database** — the same MongoDB Atlas cluster used locally.
+- **Socket.IO** — disabled in production; serverless functions can't hold a persistent WebSocket connection, so live in-app notifications only work in local dev (`server.js`).
+
+For local development, see [Getting started](#getting-started) above.

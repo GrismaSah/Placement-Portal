@@ -11,7 +11,6 @@ import { notify } from "../utils/notify.js";
 
 export const registerAdmin = catchAsyncErrors(async (req, res, next) => {
     const { firstname, lastname, email, phone, password } = req.body;
-    // console.log(req.body);
 
 
   if (!firstname || !lastname || !email || !phone || !password ) {

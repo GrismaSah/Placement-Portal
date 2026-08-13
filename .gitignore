@@ -60,7 +60,7 @@ lerna-debug.log*
 
 # ---------------------------------------------------------------------------
 # Runtime / temporary
-# express-fileupload stages resume uploads on disk before the Cloudinary call.
+# express-fileupload stages resume uploads on disk before the GridFS write.
 # ---------------------------------------------------------------------------
 tmp/
 temp/

@@ -12,7 +12,6 @@ export const sendRecruiterStatusEmailApproved = async (doc) => {
   };
   try {
     await transporter.sendMail(mailOptions);
-    // console.log(`Approval email sent to ${doc.email}`);
   } catch (error) {
     console.error("Error sending approval email:", error);
   }
@@ -29,7 +28,6 @@ export const sendRecruiterStatusEmailDeclined = async (doc) => {
   };
   try {
     await transporter.sendMail(mailOptions);
-    // console.log(`Decline email sent to ${doc.email}`);
   } catch (error) {
     console.error("Error sending decline email:", error);
   }

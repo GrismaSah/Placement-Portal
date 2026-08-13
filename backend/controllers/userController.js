@@ -119,7 +119,6 @@ export const login = catchAsyncErrors(async (req, res, next) => {
   // Stored emails are lowercased on save (see userSchema.js); a query has to
   // match that or "Student@Jain.Test" typed at login stops finding the
   // account "student@jain.test" that was actually stored.
-  // const user = await User.findOne({ email }).select("+password");
   const user = await User.findOne({ email: String(email).trim().toLowerCase() });
   if (!user) {
     return next(new ErrorHandler("Invalid Email.", 400));
@@ -218,8 +217,6 @@ export const verifyUser = catchAsyncErrors(async (req, res, next) => {
   if (!verificationCode || !email) {
     return next(new ErrorHandler("Please provide verification code."));
   }
-  // console.log(verificationCode, email);
-
   const user = await User.findOne({ email: String(email).trim().toLowerCase() });
   if (!user) {
     return next(new ErrorHandler("User not found.", 404));
@@ -365,8 +362,7 @@ export const updateProfile = catchAsyncErrors(async (req, res, next) => {
 // update password
 export const updatePassword = catchAsyncErrors(async (req, res, next) => {
   const { oldPassword, newPassword } = req.body;
-  // console.log(oldPassword, newPassword);
-  
+
 
   if (!oldPassword || !newPassword) {
     return next(new ErrorHandler("Old password and new password are required.", 400));

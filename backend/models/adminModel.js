@@ -27,12 +27,6 @@ const adminSchema = new mongoose.Schema(
     },
     phone: { type: String, required: true, unique: true, trim: true },
     password: { type: String, required: true, select: false },
-    // notifications: [
-    //   {
-    //     message: { type: String, required: true },
-    //     createdAt: { type: Date, default: Date.now },
-    //   },
-    // ],
   },
   { timestamps: true }
 );

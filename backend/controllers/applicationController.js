@@ -359,13 +359,3 @@ export const jobseekerDeleteApplication = catchAsyncErrors(
     });
   }
 );
-
-// export const getApplicationsCount = async (req, res) => {
-//     try {
-//         const { jobId } = req.params;
-//         const count = await Job.countDocuments({ jobId });
-//         return res.status(200).json({ jobId, count });
-//     } catch (error) {
-//         return res.status(500).json({ message: 'Error fetching application count', error });
-//     }
-// };

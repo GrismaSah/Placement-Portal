@@ -79,16 +79,27 @@ export const getPlacementAnalytics = catchAsyncErrors(async (req, res) => {
       { $limit: 10 },
     ]),
 
+    // Grouped by offer.acceptedAt — when the placement actually happened —
+    // not updatedAt, which is merely the last time the row was touched, so
+    // editing an old record used to move it into the wrong month.
+    // applicationController sets acceptedAt on every move to "Placed".
     Application.aggregate([
-      { $match: { status: "Placed", updatedAt: { $exists: true } } },
+      { $match: { status: "Placed", "offer.acceptedAt": { $exists: true, $ne: null } } },
       {
         $group: {
-          _id: { year: { $year: "$updatedAt" }, month: { $month: "$updatedAt" } },
+          _id: {
+            year: { $year: "$offer.acceptedAt" },
+            month: { $month: "$offer.acceptedAt" },
+          },
           placed: { $sum: 1 },
         },
       },
-      { $sort: { "_id.year": 1, "_id.month": 1 } },
+      // Descending, then limit, takes the most recent twelve months. Ascending
+      // then limit — what this did before — returned the oldest twelve.
+      { $sort: { "_id.year": -1, "_id.month": -1 } },
       { $limit: 12 },
+      // Back to chronological order; the response maps this array as-is.
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
     ]),
   ]);
 

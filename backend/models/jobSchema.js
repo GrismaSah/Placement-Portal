@@ -30,20 +30,24 @@ const jobSchema = new mongoose.Schema({
     type: String,
     required: [true, "Please provide company name."],
   },
+  // min/max, not minLength/maxLength: the latter are String validators and
+  // Mongoose silently ignores them on a Number, so every salary bound here
+  // was inert — a 1-rupee and a 15-digit salary both validated.
+  // 1000..999999999 is the 4-to-9-digit range the messages already promised.
   fixedSalary: {
     type: Number,
-    minLength: [4, "Salary must contain at least 4 digits"],
-    maxLength: [9, "Salary cannot exceed 9 digits"],
+    min: [1000, "Salary must contain at least 4 digits"],
+    max: [999999999, "Salary cannot exceed 9 digits"],
   },
   salaryFrom: {
     type: Number,
-    minLength: [4, "Salary must contain at least 4 digits"],
-    maxLength: [9, "Salary cannot exceed 9 digits"],
+    min: [1000, "Salary must contain at least 4 digits"],
+    max: [999999999, "Salary cannot exceed 9 digits"],
   },
   salaryTo: {
     type: Number,
-    minLength: [4, "Salary must contain at least 4 digits"],
-    maxLength: [9, "Salary cannot exceed 9 digits"],
+    min: [1000, "Salary must contain at least 4 digits"],
+    max: [999999999, "Salary cannot exceed 9 digits"],
   },
   expired: {
     type: Boolean,

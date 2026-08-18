@@ -343,7 +343,7 @@ export const updateProfile = catchAsyncErrors(async (req, res, next) => {
   // role, status, isVerified, email and password all live on this same
   // document, so a blind merge would let a student PUT {role:"Recruiter",
   // status:"Approved"} and promote themselves past the Admin approval flow.
-  const { name, phone, address, enrollment } = req.body;
+  const { name, phone, address, enrollment, branch, batch, cgpa } = req.body;
 
   if (name !== undefined) user.name = name;
   if (phone !== undefined) user.phone = phone;
@@ -352,6 +352,13 @@ export const updateProfile = catchAsyncErrors(async (req, res, next) => {
   if (enrollment !== undefined && user.role === "Student") {
     user.enrollment = enrollment;
   }
+  // Academic fields are student-only for the same reason as enrolment. They
+  // were missing from the whitelist rather than deliberately excluded: the
+  // form sends all three, the server dropped them, and the UI still reported
+  // success — which is also why branch-wise analytics could never populate.
+  if (branch !== undefined && user.role === "Student") user.branch = branch;
+  if (batch !== undefined && user.role === "Student") user.batch = batch;
+  if (cgpa !== undefined && user.role === "Student") user.cgpa = cgpa;
 
   // save() rather than findByIdAndUpdate so the schema validators run.
   await user.save();

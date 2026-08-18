@@ -5,6 +5,7 @@ import { FiChevronsLeft, FiLogOut, FiMenu, FiUser, FiX } from "react-icons/fi";
 import { Context } from "../../main";
 import { api, apiError } from "../../lib/api";
 import { cn } from "../../lib/cn";
+import { invalidate } from "../../lib/useQuery";
 import { mobileNavFor, navFor, roleLabel } from "../../lib/roles";
 import { displayName } from "../../utils/avatar";
 import JainLogo from "../brand/JainLogo";
@@ -94,6 +95,10 @@ const AppShell = () => {
       navigate("/login", { replace: true });
     } catch (error) {
       toast.error(apiError(error, "Could not sign out"));
+    } finally {
+      // The module-level useQuery cache outlives a client-side route change,
+      // so the next account on this browser would see the previous one's data.
+      invalidate();
     }
   };
 

@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { FiLock, FiUser } from "react-icons/fi";
 import { Context } from "../../main";
@@ -20,7 +21,17 @@ import ResumeSection from "./ResumeSection";
 const Profile = () => {
   const { user, setUser } = useContext(Context);
 
-  const [tab, setTab] = useState(isStudent(user) ? "resume" : "details");
+  const { pathname } = useLocation();
+
+  // /app/profile and /app/resume render this same component, so the opening tab
+  // has to come from the route rather than the role alone.
+  const [tab, setTab] = useState(
+    pathname.endsWith("/resume")
+      ? "resume"
+      : pathname.endsWith("/profile")
+        ? "details"
+        : isStudent(user) ? "resume" : "details"
+  );
   const [details, setDetails] = useState({
     name: "",
     firstname: "",

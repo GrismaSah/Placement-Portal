@@ -160,7 +160,17 @@ export const getResumeFile = catchAsyncErrors(async (req, res, next) => {
       "recruiterId.user": req.user._id,
     }));
 
-  if (!isOwner && !isRecruiterForApplication) {
+  // Applying copies the file to a new fileId that lives only on the
+  // Application, so the submitting student owns no Resume row for it.
+  const isApplicantForApplication =
+    !isOwner &&
+    !isRecruiterForApplication &&
+    (await Application.exists({
+      "resume.fileId": fileId,
+      "applicantID.user": req.user._id,
+    }));
+
+  if (!isOwner && !isRecruiterForApplication && !isApplicantForApplication) {
     return next(new ErrorHandler("Not authorised to view this resume.", 403));
   }
 

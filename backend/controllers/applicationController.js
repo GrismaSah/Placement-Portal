@@ -3,6 +3,7 @@ import ErrorHandler from "../middlewares/error.js";
 import { Application } from "../models/applicationSchema.js";
 import { Job } from "../models/jobSchema.js";
 import { Resume } from "../models/resumeSchema.js";
+import { User } from "../models/userSchema.js";
 import {
   ALLOWED_RESUME_TYPES,
   MAX_RESUME_BYTES,
@@ -224,7 +225,30 @@ export const updateApplicationStatus = catchAsyncErrors(async (req, res, next) =
     };
   }
   if (status === "Placed") {
-    application.offer = { ...(application.offer ?? {}), acceptedAt: new Date() };
+    const acceptedAt = new Date();
+    // Read the CTC before reassigning `offer`, so it cannot be lost.
+    const placedCtc = application.offer?.ctc;
+    application.offer = { ...(application.offer ?? {}), acceptedAt };
+
+    // Mirror the outcome onto the student record. `placedAt` exists precisely
+    // to denormalise this (see the comment on it in userSchema) but nothing
+    // ever wrote it, so a student with a Placed application stayed
+    // placementStatus: "Unplaced". Placement analytics derives its figures
+    // from applications and was therefore correct, but the student directory
+    // filters on placementStatus — so the two screens contradicted each other
+    // for the same student.
+    await User.findByIdAndUpdate(
+      application.applicantID?.user,
+      {
+        placementStatus: "Placed",
+        placedAt: {
+          company: application.jobId?.company,
+          ctc: placedCtc,
+          placedOn: acceptedAt,
+        },
+      },
+      { runValidators: true }
+    );
   }
 
   await application.save();

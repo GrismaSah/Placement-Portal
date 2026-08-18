@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Placement portal for JAIN (Deemed-to-be University), Bengaluru.",
+  "author": "Grisma Sah <23btrcn082@jainuniversity.ac.in>",
   "engines": {
     "node": ">=18"
   },

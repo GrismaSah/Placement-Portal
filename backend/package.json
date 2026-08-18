@@ -12,7 +12,7 @@
     "seed:jobs": "node seedJobs.js",
     "seed:allowlist": "node seedStudentAllowlist.js"
   },
-  "author": "Satwik Gupta and Dev yadav and Saloni Kumari and Sachin Kumar",
+  "author": "Grisma Sah <23btrcn082@jainuniversity.ac.in>",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^3.0.3",

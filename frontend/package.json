@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "author": "Grisma Sah <23btrcn082@jainuniversity.ac.in>",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

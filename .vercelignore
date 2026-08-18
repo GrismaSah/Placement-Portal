@@ -24,3 +24,5 @@ npm-debug.log*
 # Seeders are run manually against the database, never as part of a deploy.
 backend/seed.js
 backend/seedJobs.js
+backend/seedStudentAllowlist.js
+backend/seedDemoApplication.js

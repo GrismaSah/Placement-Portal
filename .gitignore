@@ -83,6 +83,13 @@ uploads/
 *.swp
 
 # ---------------------------------------------------------------------------
+# Personal interview-preparation notes. Local only, never published.
+# This repo is public, and prep/09-fix-list.md in particular is a precise
+# writeup of this app's own weaknesses — publishing it would hand out a map.
+# ---------------------------------------------------------------------------
+prep/
+
+# ---------------------------------------------------------------------------
 # OS cruft (this repo lives inside a OneDrive-synced folder)
 # ---------------------------------------------------------------------------
 .DS_Store

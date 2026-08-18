@@ -62,16 +62,39 @@ export const loginAdmin = catchAsyncErrors(async (req, res, next) => {
   if (!admin) {
     return next(new ErrorHandler("Invalid Email.", 400));
   }
-  // The truthiness guard is load-bearing: a successful login nulls the stored
-  // code, so without it a caller sending "verificationCode": null satisfies
-  // null !== null and skips the second factor entirely.
-  if (!verificationCode || admin.verificationCode !== verificationCode) {
-    return next(new ErrorHandler("Invalid verification code.", 400));
-  }
-
+  // Password first, before anything that mints or emails a code: a caller who
+  // cannot authenticate must not be able to make us send mail or overwrite the
+  // stored code.
   const isPasswordMatched = await admin.comparePassword(password);
   if (!isPasswordMatched) {
     return next(new ErrorHandler("Invalid Password.", 400));
+  }
+
+  // A correct password with no code submitted is the "send me a code" step,
+  // mirroring the Recruiter branch in userController. Signing in nulls the
+  // stored code, so without this an admin could sign in only once per
+  // `npm run seed:accounts` — the previous inequality check happened to paper
+  // over that by letting a falsy code through, which was the 2FA bypass.
+  // Answering 200 with no `user` is what moves the client to its code screen.
+  if (!verificationCode) {
+    const freshCode = Math.floor(100000 + Math.random() * 900000).toString();
+    admin.verificationCode = freshCode;
+    await admin.save();
+    const delivery = await sendVerificationCode(email, freshCode);
+
+    return res.status(200).json({
+      success: true,
+      message: delivery.sent
+        ? "Verification code sent to your email. Please check your inbox."
+        : "Could not send the verification email — the code is in the server log.",
+      emailSent: delivery.sent,
+    });
+  }
+
+  // Still an explicit comparison rather than a bare inequality, so a falsy or
+  // wrong code can never satisfy it.
+  if (admin.verificationCode !== verificationCode) {
+    return next(new ErrorHandler("Invalid verification code.", 400));
   }
   if(admin.isVerified === false) {
     sentRegisteredEmail(admin);

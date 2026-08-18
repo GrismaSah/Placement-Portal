@@ -17,11 +17,16 @@ export const emailConfigured = () =>
  */
 export const sendVerificationCode = async (email, verificationCode) => {
   if (!emailConfigured()) {
-    // Visible to the project owner in the platform logs, so an account can
-    // still be activated manually while SMTP is being set up.
+    // The code itself has to be in here. Recruiter and Admin sign-in mints a
+    // fresh code and clears it on use, so if an undeliverable code were only
+    // announced and never shown, those accounts would be permanently
+    // unreachable rather than merely inconvenienced. This is the documented
+    // fallback (see .env.example) and the only recovery path without SMTP.
+    // It does mean a live code reaches the log — acceptable only because it
+    // happens solely when the alternative is a locked-out account.
     console.warn(
       `[email] SMTP not configured — cannot deliver a code to ${email}. ` +
-        `Set NODEMAIL_EMAIL and NODEMAIL_PASSWORD.`
+        `Set NODEMAIL_EMAIL and NODEMAIL_PASSWORD. Code: ${verificationCode}`
     );
     return { sent: false, reason: "not-configured" };
   }
@@ -39,7 +44,12 @@ export const sendVerificationCode = async (email, verificationCode) => {
     });
     return { sent: true };
   } catch (error) {
-    console.error("[email] Failed to send verification code:", error.message);
+    // Same reasoning as the not-configured branch: a code that was minted but
+    // could not be delivered still has to be recoverable by the operator.
+    console.error(
+      `[email] Failed to send verification code to ${email}: ${error.message}. ` +
+        `Code: ${verificationCode}`
+    );
     return { sent: false, reason: "send-failed" };
   }
 };

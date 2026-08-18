@@ -62,7 +62,10 @@ export const loginAdmin = catchAsyncErrors(async (req, res, next) => {
   if (!admin) {
     return next(new ErrorHandler("Invalid Email.", 400));
   }
-  if (admin.verificationCode !== verificationCode) {
+  // The truthiness guard is load-bearing: a successful login nulls the stored
+  // code, so without it a caller sending "verificationCode": null satisfies
+  // null !== null and skips the second factor entirely.
+  if (!verificationCode || admin.verificationCode !== verificationCode) {
     return next(new ErrorHandler("Invalid verification code.", 400));
   }
 

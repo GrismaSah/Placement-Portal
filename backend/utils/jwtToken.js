@@ -9,7 +9,7 @@ import { envInt, isProduction } from "../config/env.js";
  * is offline-crackable, and the code is the second factor for recruiter and
  * officer sign-in, which made returning it self-defeating.
  */
-const publicUser = (user) => {
+export const publicUser = (user) => {
   const plain = typeof user?.toObject === "function" ? user.toObject() : { ...user };
   delete plain.password;
   delete plain.verificationCode;

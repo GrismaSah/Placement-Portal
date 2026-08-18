@@ -1,7 +1,7 @@
 import { catchAsyncErrors } from "../middlewares/catchAsyncError.js";
 import { User } from "../models/userSchema.js";
 import ErrorHandler from "../middlewares/error.js";
-import { clearTokenCookie, sendToken } from "../utils/jwtToken.js";
+import { clearTokenCookie, publicUser, sendToken } from "../utils/jwtToken.js";
 import { sendVerificationCode } from "../utils/verifyEmail/email.js";
 import { sentRegisteredEmail } from "../utils/registeredUser/register.js";
 import { emitProfileUpdate } from "../socket.js";
@@ -119,7 +119,11 @@ export const login = catchAsyncErrors(async (req, res, next) => {
   // Stored emails are lowercased on save (see userSchema.js); a query has to
   // match that or "Student@Jain.Test" typed at login stops finding the
   // account "student@jain.test" that was actually stored.
-  const user = await User.findOne({ email: String(email).trim().toLowerCase() });
+  // +password: the hash is select:false on the schema, and comparePassword
+  // below needs it.
+  const user = await User.findOne({
+    email: String(email).trim().toLowerCase(),
+  }).select("+password");
   if (!user) {
     return next(new ErrorHandler("Invalid Email.", 400));
   }
@@ -184,7 +188,10 @@ export const login = catchAsyncErrors(async (req, res, next) => {
         ? "Verification code sent to your email. Please check your inbox."
         : "Could not send the verification email. Please contact the placement office.",
       emailSent: delivery.sent,
-      user,
+      // publicUser, not the raw document: this branch mints a verification
+      // code four lines above, and returning the document handed that second
+      // factor — and the bcrypt hash — straight back to the caller.
+      user: publicUser(user),
     });
   }
 
@@ -368,7 +375,9 @@ export const updatePassword = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Old password and new password are required.", 400));
   }
 
-  const user = await User.findById(req.user._id);
+  // +password: the hash is select:false on the schema, and comparePassword
+  // below needs it.
+  const user = await User.findById(req.user._id).select("+password");
 
   if (!user) {
     return next(new ErrorHandler("User not found.", 404));

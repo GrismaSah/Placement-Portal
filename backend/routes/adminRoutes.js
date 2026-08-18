@@ -10,7 +10,11 @@ import {
 
 const router = express.Router();
 
-router.post("/register", authLimiter, registerAdmin);
+// Creating an admin has to be an admin-only act. Unguarded, anyone could POST
+// here, receive the verification code at their own address, log in, and then
+// read the entire student directory and approve recruiters. The first admin is
+// created by `npm run seed:accounts`, so gating this breaks no bootstrap path.
+router.post("/register", authLimiter, isAuthenticatedAdmin, authorizeRoles("Admin"), registerAdmin);
 router.post("/login", authLimiter, loginAdmin);
 router.post("/verify", authLimiter, verifyUserAdmin);
 router.post("/generate-code", authLimiter, generateVerificationCodeAdmin);

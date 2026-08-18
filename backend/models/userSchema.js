@@ -46,7 +46,10 @@ const userSchema = new mongoose.Schema({
     required: [true, "Please provide a Password!"],
     minLength: [8, "Password must contain at least 8 characters!"],
     // maxLength: [32, "Password cannot exceed 32 characters!"],
-    // select: false,
+    // Never loaded unless a query explicitly asks for it with
+    // .select("+password"). Scrubbing on the way out is opt-in and one missed
+    // path leaks the hash; this makes leaking it require a deliberate act.
+    select: false,
   },
   role: {
     type: String,

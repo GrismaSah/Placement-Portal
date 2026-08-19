@@ -10,7 +10,15 @@ import toast from "react-hot-toast";
 import { useQuery } from "../../lib/useQuery";
 import { stageMeta } from "../ui/Badge";
 import PageHeader from "../Layout/PageHeader";
-import { Button, Card, CardHeader, EmptyState, Skeleton, StatCard } from "../ui";
+import {
+  Button,
+  Card,
+  CardHeader,
+  EmptyState,
+  ErrorState,
+  Skeleton,
+  StatCard,
+} from "../ui";
 
 /** ₹45,00,000 → "₹45.0 L". Indian conventions, not "4.5M". */
 export const formatINR = (n) => {
@@ -65,7 +73,7 @@ const Bar = ({ label, value, total, hint }) => {
  * the numbers stay correct even if that field drifts.
  */
 const Analytics = () => {
-  const { data, isInitialLoading } = useQuery("/api/v1/admin/analytics");
+  const { data, isInitialLoading, error, refetch } = useQuery("/api/v1/admin/analytics");
   const a = data?.analytics ?? {};
 
   const exportCsv = () => {
@@ -97,6 +105,26 @@ const Analytics = () => {
             <Skeleton key={i} className="h-32" rounded="rounded-[var(--radius-card)]" />
           ))}
         </div>
+      </>
+    );
+  }
+
+  // The most important error state in the app. Every figure here derives from
+  // `a`, which falls back to {} — so a failed request rendered a 0% placement
+  // rate, ₹0 packages and empty branch tables as though they were the real
+  // numbers, to the one person whose job is to report them upward.
+  if (error) {
+    return (
+      <>
+        <PageHeader title="Placement analytics" />
+        <Card padded={false}>
+          <ErrorState
+            title="Couldn't load placement analytics"
+            description="These figures are unavailable right now — they have not been calculated as zero."
+            error={error}
+            onRetry={refetch}
+          />
+        </Card>
       </>
     );
   }

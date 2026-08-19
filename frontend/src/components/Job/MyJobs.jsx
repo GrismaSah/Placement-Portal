@@ -19,6 +19,7 @@ import {
   Button,
   Card,
   EmptyState,
+  ErrorState,
   Input,
   Modal,
   Skeleton,
@@ -35,7 +36,7 @@ import { salaryLabel } from "./Jobs";
  * has applications, because students are relying on those records.
  */
 const MyJobs = () => {
-  const { data, isInitialLoading, refetch } = useQuery("/api/v1/job/getmyjobs");
+  const { data, isInitialLoading, error, refetch } = useQuery("/api/v1/job/getmyjobs");
   const [editing, setEditing] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -107,6 +108,16 @@ const MyJobs = () => {
             <Skeleton key={i} className="h-60" rounded="rounded-[var(--radius-card)]" />
           ))}
         </div>
+      ) : error ? (
+        // Not the empty state: telling a recruiter with live postings that they
+        // have none is worse than telling them the request failed.
+        <Card padded={false}>
+          <ErrorState
+            title="Couldn't load your postings"
+            error={error}
+            onRetry={refetch}
+          />
+        </Card>
       ) : jobs.length === 0 ? (
         <Card padded={false}>
           <EmptyState

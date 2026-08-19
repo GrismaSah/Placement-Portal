@@ -10,6 +10,7 @@ import {
   Button,
   Card,
   EmptyState,
+  ErrorState,
   Modal,
   Skeleton,
   StatusBadge,
@@ -35,7 +36,7 @@ const NEXT_STAGE = {
 };
 
 const AllApplicants = () => {
-  const { data, isInitialLoading, refetch } = useQuery(
+  const { data, isInitialLoading, error, refetch } = useQuery(
     "/api/v1/application/recruiter/getall"
   );
 
@@ -86,6 +87,21 @@ const AllApplicants = () => {
       <>
         <PageHeader title="Applicants" />
         <Skeleton className="h-96" rounded="rounded-[var(--radius-card)]" />
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <PageHeader title="Applicants" />
+        <Card padded={false}>
+          <ErrorState
+            title="Couldn't load your applicants"
+            error={error}
+            onRetry={refetch}
+          />
+        </Card>
       </>
     );
   }

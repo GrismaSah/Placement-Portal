@@ -58,7 +58,7 @@ function passwordStrength(pw) {
 }
 
 const Register = () => {
-  const { setIsAuthorized } = useContext(Context);
+  const { setUser, setIsAuthorized } = useContext(Context);
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -147,11 +147,15 @@ const Register = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.post("/api/v1/user/verify", {
+      const { data } = await api.post("/api/v1/user/verify", {
         email: form.email,
         verificationCode: code,
       });
       toast.success("Welcome to JAIN Placements");
+      // Store the user, not just the flag — see the note on finish() in
+      // Login.jsx. App.jsx only fetches it on mount, so without this the new
+      // account lands on the dashboard with no role until a hard refresh.
+      setUser(data.user);
       setIsAuthorized(true);
       navigate("/app/dashboard", { replace: true });
     } catch (err) {

@@ -91,9 +91,9 @@ npm run dev                     # starts the backend on :4000
 npm run dev:frontend            # in a second terminal, starts the frontend on :5173
 ```
 
-Ports are fixed — the frontend hardcodes `http://localhost:4000` for API calls, so the backend must run on `4000` and the frontend on `5173`.
+The frontend defaults to `http://localhost:4000` for API calls, so the backend should run on `4000` and the frontend on `5173`. Point them elsewhere with `VITE_API_URL` and `PORT`.
 
-Recruiter and Admin logins require a fresh emailed verification code every sign-in; with no SMTP configured, use the fixed seed code from `npm run seed` instead of requesting a new one.
+Recruiter and Admin logins require a fresh verification code every sign-in — entering the password with no code is what requests one. **With no SMTP configured the code is printed to the server console**, so watch the backend terminal; you do not need to re-seed to get one.
 
 ## API surface
 

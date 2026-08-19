@@ -1,12 +1,13 @@
 import React, { createContext, useState } from "react";
 import ReactDOM from "react-dom/client";
 
-// Design tokens first, legacy App.css second (App.jsx imports it). Until the
-// last screen is migrated in Phase 9 the two stylesheets coexist, and the
-// later import has to win on the rules they both define.
+// The app's only stylesheet. The design tokens and every component style live
+// here; the legacy App.css this comment used to describe is gone, and nothing
+// imports it any more.
 import "./styles/theme.css";
 
 import App from "./App.jsx";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { ThemeProvider } from "./lib/useTheme.jsx";
 
 export const Context = createContext({
@@ -41,6 +42,10 @@ const AppWrapper = () => {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <AppWrapper />
+    {/* Outermost, so a throw inside the providers is caught too. Without it a
+        render-phase error unmounts the tree and leaves a blank white page. */}
+    <ErrorBoundary>
+      <AppWrapper />
+    </ErrorBoundary>
   </React.StrictMode>
 );

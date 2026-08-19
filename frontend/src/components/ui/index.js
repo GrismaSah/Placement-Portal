@@ -23,6 +23,7 @@ export { default as Tabs } from "./Tabs";
 export { default as Avatar, AvatarGroup } from "./Avatar";
 export { default as Skeleton, SkeletonText, SkeletonCard, SkeletonGrid } from "./Skeleton";
 export { default as EmptyState } from "./EmptyState";
+export { default as ErrorState } from "./ErrorState";
 export { default as StatCard, useCountUp } from "./StatCard";
 export { default as Pagination } from "./Pagination";
 export { default as Stepper, StatusTimeline } from "./Stepper";

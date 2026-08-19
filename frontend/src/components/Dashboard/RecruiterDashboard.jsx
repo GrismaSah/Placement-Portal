@@ -24,10 +24,11 @@ import {
 /**
  * Recruiter home.
  *
- * Note the approval banner: a recruiter whose account is still Pending can
- * currently post jobs anyway, because the backend only blocks role === Student.
- * Until that is enforced server-side, the UI at least tells them their status
- * honestly rather than silently letting them believe they are live.
+ * Note the approval banner. It is not the enforcement — postJob rejects any
+ * recruiter whose status is not "Approved", with a distinct message for
+ * Declined — it is what stops that rejection being a surprise. A recruiter who
+ * only discovers they are gated at the moment they submit a filled-in posting
+ * has been misled by the UI up to that point.
  */
 const RecruiterDashboard = ({ user }) => {
   const [jobs, setJobs] = useState(null);

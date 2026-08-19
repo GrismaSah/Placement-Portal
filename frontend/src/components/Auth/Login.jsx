@@ -33,7 +33,7 @@ const ALL_ROLES = [
 ];
 
 const Login = ({ allowedRoles = ["Student"] }) => {
-  const { setIsAuthorized } = useContext(Context);
+  const { setUser, setIsAuthorized } = useContext(Context);
   const navigate = useNavigate();
 
   const ROLES = ALL_ROLES.filter((r) => allowedRoles.includes(r.value));
@@ -58,7 +58,18 @@ const Login = ({ allowedRoles = ["Student"] }) => {
     return () => clearTimeout(timer);
   }, [cooldown]);
 
-  const finish = () => {
+  /**
+   * Complete a sign-in.
+   *
+   * The user has to be stored, not just the authorized flag. App.jsx fetches
+   * the user exactly once on mount, so nothing else populates it after a
+   * client-side sign-in — `user` stayed `{}` until a hard refresh. With no
+   * `role` on it, Dashboard sent every role to the student dashboard,
+   * navFor() rendered a one-item sidebar, every RoleRoute bounced back to
+   * /app/dashboard, and AppShell's logout picked the wrong endpoint.
+   */
+  const finish = (signedInUser) => {
+    setUser(signedInUser);
     setIsAuthorized(true);
     navigate("/app/dashboard", { replace: true });
   };
@@ -81,7 +92,7 @@ const Login = ({ allowedRoles = ["Student"] }) => {
       // — not the status code — is what tells us we are actually signed in.
       if (data.user) {
         toast.success(data.message || "Signed in");
-        finish();
+        finish(data.user);
       } else {
         setStep("verify");
         setCooldown(60);
@@ -110,6 +121,10 @@ const Login = ({ allowedRoles = ["Student"] }) => {
     setLoading(true);
 
     try {
+      // Both branches end in a session, so both carry the user back — /verify
+      // answers through sendToken() just as /login does.
+      let signedInUser;
+
       if (isAdmin || role === "Recruiter") {
         // These roles verify as part of logging in, not through /verify.
         const payload = isAdmin
@@ -117,12 +132,17 @@ const Login = ({ allowedRoles = ["Student"] }) => {
           : { email, password, role, verificationCode: code };
         const { data } = await api.post(`${base}/login`, payload);
         if (!data.user) throw new Error("That code was not accepted.");
+        signedInUser = data.user;
         toast.success("Signed in");
       } else {
-        await api.post(`${base}/verify`, { email, verificationCode: code });
+        const { data } = await api.post(`${base}/verify`, {
+          email,
+          verificationCode: code,
+        });
+        signedInUser = data.user;
         toast.success("Email verified");
       }
-      finish();
+      finish(signedInUser);
     } catch (err) {
       const message = apiError(err, "That code was not accepted.");
       setError(message);

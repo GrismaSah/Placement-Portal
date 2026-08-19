@@ -9,6 +9,27 @@ import { sendRecruiterStatusEmailApproved, sendRecruiterStatusEmailDeclined } fr
 import { emitProfileUpdate } from "../socket.js";
 import { notify } from "../utils/notify.js";
 
+/**
+ * Coerce a client-supplied email into a string before it reaches a query.
+ *
+ * express.json() parses `{"email": {"$ne": null}}` into an *object*, and
+ * Mongoose passes an object straight through as a query operator — so
+ * `Admin.findOne({ email })` with that body selected an arbitrary admin
+ * document instead of failing to match. From there the caller could aim the
+ * code-minting and code-checking endpoints at a real admin account without
+ * knowing a single admin address.
+ *
+ * userController already does this inline at every one of its User lookups;
+ * these six were the ones that missed it.
+ *
+ * Not lowercasing here on purpose: adminSchema has no `lowercase: true`, so
+ * addresses are stored exactly as first entered. Folding case on the way into
+ * the query would stop matching any admin already stored with a capital
+ * letter. Fixing that properly means normalising the stored data and the
+ * schema together — a migration, not a one-line change.
+ */
+const queryEmail = (email) => String(email ?? "").trim();
+
 export const registerAdmin = catchAsyncErrors(async (req, res, next) => {
     const { firstname, lastname, email, phone, password } = req.body;
 
@@ -17,7 +38,7 @@ export const registerAdmin = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Please fill all required fields!"));
   }
 
-  const isEmail = await Admin.findOne({ email });
+  const isEmail = await Admin.findOne({ email: queryEmail(email) });
   if (isEmail) {
     return next(new ErrorHandler("Email already registered!"));
   }
@@ -58,7 +79,7 @@ export const loginAdmin = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Please provide email and password."));
   }
 
-  const admin = await Admin.findOne({ email }).select("+password");
+  const admin = await Admin.findOne({ email: queryEmail(email) }).select("+password");
   if (!admin) {
     return next(new ErrorHandler("Invalid Email.", 400));
   }
@@ -232,7 +253,7 @@ export const updateProfileAdmin = catchAsyncErrors(async (req, res, next) => {
 export const verifyUserAdmin = catchAsyncErrors(async (req, res, next) => {
   const { verificationCode, email } = req.body;
 
-  const user = await Admin.findOne({ email });
+  const user = await Admin.findOne({ email: queryEmail(email) });
   if (!user) {
     return next(new ErrorHandler("User not found.", 404));
   }
@@ -260,7 +281,7 @@ export const generateVerificationCodeAdmin = catchAsyncErrors(
     const verificationCode = Math.floor(
       100000 + Math.random() * 900000
     ).toString();
-    const user = await Admin.findOne({ email });
+    const user = await Admin.findOne({ email: queryEmail(email) });
     if (!user) {
       return next(new ErrorHandler("User not found.", 404));
     }
@@ -279,7 +300,7 @@ export const generateVerificationCodeAdmin = catchAsyncErrors(
 
 export const forgotPasswordAdmin = catchAsyncErrors(async (req, res, next) => {
   const { email, verificationCode } = req.body;
-  const user = await Admin.findOne({ email });
+  const user = await Admin.findOne({ email: queryEmail(email) });
 
   if (!user) {
     return next(new ErrorHandler("User not found.", 404));
@@ -323,7 +344,7 @@ export const generateNewPasswordAdmin = catchAsyncErrors(async (req, res, next) 
     );
   }
 
-  const user = await Admin.findOne({ email });
+  const user = await Admin.findOne({ email: queryEmail(email) });
   if (!user) {
     return next(new ErrorHandler("User not found.", 404));
   }

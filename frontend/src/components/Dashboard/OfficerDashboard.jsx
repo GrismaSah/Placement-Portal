@@ -41,8 +41,9 @@ const OfficerDashboard = ({ user }) => {
 
     api
       .get("/api/v1/admin/pending-recruiters")
-      // The endpoint 404s when the queue is empty, so "no pending recruiters"
-      // arrives through the error path. Treat it as the empty list it is.
+      // The endpoint used to 404 on an empty queue, which forced "all clear"
+      // through the error path. It now answers 200 with an empty array, so the
+      // catch below is a genuine request failure — not the empty case.
       .then(({ data }) => setPending(data.pendingRecruiters ?? data.users ?? []))
       .catch(() => setPending([]));
   }, []);

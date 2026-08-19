@@ -23,7 +23,9 @@ Environment variables are documented in the root [`.env.example`](../.env.exampl
 | `npm run seed:jobs` | Just the demo job listings |
 | `npm run seed:allowlist` | Just the enrollment-number roster |
 
-Re-run `npm run seed:accounts` whenever a Recruiter/Admin login gets stuck — a successful login clears their verification code, and with no SMTP configured there's no way to receive a new one otherwise. Demo code is `123456`.
+Recruiter and Admin sign-in is self-service: submitting the correct password with no verification code mints and sends a fresh one, so a login never gets permanently stuck. **With no SMTP configured the code is printed to the server console** — read it from the terminal rather than re-seeding.
+
+The seeder sets a fixed code of `123456` on the demo Recruiter and Admin. That is a convenience for local demos only; because a correct code alone establishes a session, **never run the seeders against a deployed database.**
 
 ## Routes
 

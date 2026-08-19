@@ -6,7 +6,7 @@ import { Context } from "../../main";
 import { api, apiError } from "../../lib/api";
 import { cn } from "../../lib/cn";
 import { invalidate } from "../../lib/useQuery";
-import { mobileNavFor, navFor, roleLabel } from "../../lib/roles";
+import { loginPathFor, mobileNavFor, navFor, roleLabel } from "../../lib/roles";
 import { displayName } from "../../utils/avatar";
 import JainLogo from "../brand/JainLogo";
 import { Avatar, Menu, MenuItem, MenuLabel, MenuSeparator, ThemeToggle } from "../ui";
@@ -87,12 +87,15 @@ const AppShell = () => {
   const handleLogout = async () => {
     // Admins live in a separate collection with their own logout handler.
     const endpoint = user?.role === "Admin" ? "/api/v1/admin/logout" : "/api/v1/user/logout";
+    // Read before setUser({}) wipes it: each role signs back in at its own
+    // unlinked route, so "/login" for everyone stranded Recruiters and Admins.
+    const backToLogin = loginPathFor(user?.role);
     try {
       const { data } = await api.get(endpoint);
       toast.success(data.message || "Signed out");
       setUser({});
       setIsAuthorized(false);
-      navigate("/login", { replace: true });
+      navigate(backToLogin, { replace: true });
     } catch (error) {
       toast.error(apiError(error, "Could not sign out"));
     } finally {

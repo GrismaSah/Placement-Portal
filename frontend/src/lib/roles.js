@@ -97,6 +97,23 @@ export const mobileNavFor = (role) => navFor(role).slice(0, 4);
 
 export const homeFor = () => "/app/dashboard";
 
+/**
+ * Where a signed-out user of this role goes to sign back in.
+ *
+ * /recruiter/login and /placement-office/login are deliberately unlinked from
+ * every nav and from the student /login page (see the comment atop Login.jsx),
+ * which made sending everyone to "/login" on logout a one-way door: /login
+ * only accepts Students, so a Recruiter landed on "User with provided email
+ * and Student not found!" and an Admin on "Invalid Email.", with no link
+ * anywhere back to their real entry point. Unlinked is not the same as
+ * unreachable — the app still has to return them to their own door.
+ */
+export const loginPathFor = (role) =>
+  ({
+    [ROLES.RECRUITER]: "/recruiter/login",
+    [ROLES.OFFICER]: "/placement-office/login",
+  })[role] ?? "/login";
+
 export const ROLE_ICONS = {
   Student: FiUser,
   Recruiter: FiBriefcase,

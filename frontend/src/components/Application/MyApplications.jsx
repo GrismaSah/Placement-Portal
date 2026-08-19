@@ -10,6 +10,7 @@ import {
   Button,
   Card,
   EmptyState,
+  ErrorState,
   Modal,
   Skeleton,
   StatusBadge,
@@ -33,7 +34,7 @@ import ResumeModal from "./ResumeModal";
 const ACTIVE = ["Applied", "Shortlisted", "Interview", "Offered"];
 
 const MyApplications = () => {
-  const { data, isInitialLoading, refetch } = useQuery(
+  const { data, isInitialLoading, error, refetch } = useQuery(
     "/api/v1/application/jobseeker/getall"
   );
   const [tab, setTab] = useState("active");
@@ -78,6 +79,21 @@ const MyApplications = () => {
             <Skeleton key={i} className="h-44" rounded="rounded-[var(--radius-card)]" />
           ))}
         </div>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <PageHeader title="My applications" />
+        <Card padded={false}>
+          <ErrorState
+            title="Couldn't load your applications"
+            error={error}
+            onRetry={refetch}
+          />
+        </Card>
       </>
     );
   }

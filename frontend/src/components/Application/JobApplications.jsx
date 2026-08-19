@@ -11,6 +11,7 @@ import {
   Button,
   Card,
   EmptyState,
+  ErrorState,
   Modal,
   Skeleton,
   StatusBadge,
@@ -39,7 +40,7 @@ const NEXT_STAGE = {
 
 const JobApplications = () => {
   const { jobId } = useParams();
-  const { data, isInitialLoading, refetch } = useQuery(
+  const { data, isInitialLoading, error, refetch } = useQuery(
     "/api/v1/application/recruiter/getall",
     { params: { jobId } }
   );
@@ -92,6 +93,21 @@ const JobApplications = () => {
       <>
         <PageHeader title="Applicants" />
         <Skeleton className="h-96" rounded="rounded-[var(--radius-card)]" />
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <PageHeader title="Applicants" />
+        <Card padded={false}>
+          <ErrorState
+            title="Couldn't load applicants for this posting"
+            error={error}
+            onRetry={refetch}
+          />
+        </Card>
       </>
     );
   }

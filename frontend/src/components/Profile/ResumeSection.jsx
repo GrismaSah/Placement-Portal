@@ -136,7 +136,12 @@ const ResumeSection = ({ resume, onChange }) => {
 
   const file = resume?.file?.fileId ? resume.file : null;
 
-  // Drives the completeness meter — the same checks the dashboard ring uses.
+  // Drives the completeness meter on this screen only. Deliberately NOT the
+  // same set as the dashboard ring in StudentDashboard: that one scores the
+  // whole profile (10 checks, including name/email/phone/address/enrollment),
+  // whereas this one scores only the résumé fields editable on this form. The
+  // two percentages will differ for the same student, and that is correct —
+  // but do not describe them as identical, which an earlier comment here did.
   const completeness = useMemo(() => {
     const checks = [
       Boolean(draft.headline),

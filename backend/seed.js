@@ -8,9 +8,15 @@
  * linked. The three pre-existing real accounts in JAIN_PLACEMENT are never
  * touched.
  *
- * Re-run this whenever you need to log in as Recruiter or Admin again: a
- * successful login clears the stored verification code, and with no SMTP
- * configured there is no way to receive a new one.
+ * You no longer need to re-run this to recover a Recruiter or Admin login.
+ * A successful login still clears the stored code, but submitting the correct
+ * password with no code mints and sends a fresh one — and with no SMTP
+ * configured that code is printed to the server console.
+ *
+ * The fixed VERIFICATION_CODE below is a local-demo convenience. A correct
+ * code alone establishes a session, so a known, never-expiring code on a
+ * reachable database is a password-free login: never run this against a
+ * deployed environment.
  */
 import mongoose from "mongoose";
 import { config } from "dotenv";

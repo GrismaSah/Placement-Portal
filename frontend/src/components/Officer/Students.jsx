@@ -7,6 +7,7 @@ import {
   Badge,
   Card,
   EmptyState,
+  ErrorState,
   Input,
   Pagination,
   Skeleton,
@@ -33,7 +34,7 @@ const Students = () => {
     return () => clearTimeout(t);
   }, [search]);
 
-  const { data, isInitialLoading } = useQuery("/api/v1/admin/students", {
+  const { data, isInitialLoading, error, refetch } = useQuery("/api/v1/admin/students", {
     params: { search: debounced, page, limit: 20 },
   });
 
@@ -114,6 +115,14 @@ const Students = () => {
 
       {isInitialLoading ? (
         <Skeleton className="h-96" rounded="rounded-[var(--radius-card)]" />
+      ) : error ? (
+        <Card padded={false}>
+          <ErrorState
+            title="Couldn't load the student directory"
+            error={error}
+            onRetry={refetch}
+          />
+        </Card>
       ) : (
         <>
           <Card padded={false} className="overflow-hidden">

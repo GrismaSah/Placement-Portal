@@ -4,7 +4,7 @@ import { FiCheck, FiMail, FiMapPin, FiPhone, FiUserCheck, FiX } from "react-icon
 import { api, apiError } from "../../lib/api";
 import { invalidate, useQuery } from "../../lib/useQuery";
 import PageHeader from "../Layout/PageHeader";
-import { Avatar, Button, Card, EmptyState, Modal, Skeleton } from "../ui";
+import { Avatar, Button, Card, EmptyState, ErrorState, Modal, Skeleton } from "../ui";
 
 /**
  * Recruiter approval queue.
@@ -15,7 +15,9 @@ import { Avatar, Button, Card, EmptyState, Modal, Skeleton } from "../ui";
  * confirmation step — rather than a dropdown that fires on change.
  */
 const RecruiterApprovals = () => {
-  const { data, isInitialLoading, refetch } = useQuery("/api/v1/admin/pending-recruiters");
+  const { data, isInitialLoading, error, refetch } = useQuery(
+    "/api/v1/admin/pending-recruiters"
+  );
   const [action, setAction] = useState(null); // { recruiter, decision }
   const [busy, setBusy] = useState(false);
 
@@ -55,6 +57,14 @@ const RecruiterApprovals = () => {
             <Skeleton key={i} className="h-52" rounded="rounded-[var(--radius-card)]" />
           ))}
         </div>
+      ) : error ? (
+        <Card padded={false}>
+          <ErrorState
+            title="Couldn't load the approval queue"
+            error={error}
+            onRetry={refetch}
+          />
+        </Card>
       ) : pending.length === 0 ? (
         <Card padded={false}>
           <EmptyState

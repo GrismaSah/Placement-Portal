@@ -249,29 +249,25 @@ export const updateProfileAdmin = catchAsyncErrors(async (req, res, next) => {
 });
 
 
-  // verification code controller
-export const verifyUserAdmin = catchAsyncErrors(async (req, res, next) => {
-  const { verificationCode, email } = req.body;
-
-  const user = await Admin.findOne({ email: queryEmail(email) });
-  if (!user) {
-    return next(new ErrorHandler("User not found.", 404));
-  }
-  if (user.verificationCode !== verificationCode) {
-    return next(new ErrorHandler("Invalid verification code.", 400));
-  }
-
-
-  user.isVerified = true;
-  user.verificationCode = null;
-  await user.save();
-
-  sentRegisteredEmail(user);
-
-
-  sendToken(user, 201, res, "User Registered Successfully!");
-});
-
+/**
+ * REMOVED: verifyUserAdmin (POST /api/v1/admin/verify).
+ *
+ * It authenticated on the emailed code alone — no password — and it lacked the
+ * `if (!verificationCode)` guard that loginAdmin, forgotPasswordAdmin and
+ * generateNewPasswordAdmin all have. `verificationCode` defaults to null and is
+ * set back to null after every successful login, so null is the resting state,
+ * and a body of {"email":"<admin>","verificationCode":null} made the check
+ * `null !== null` — false. The guard was skipped and sendToken handed back a
+ * valid Admin cookie. Any caller who knew an admin address had the student
+ * directory, the analytics and the recruiter approval queue.
+ *
+ * Deleted rather than patched: nothing called it. Login.jsx sends Admin and
+ * Recruiter through /login (which verifies the password first and then the
+ * code), and only Students use a /verify endpoint. A newly registered admin is
+ * marked verified by loginAdmin's own branch. Patching the comparison would
+ * have left a password-less session-minting endpoint in place for the next
+ * person to reintroduce the same bug into.
+ */
 
 // generate verification code and send it to the user's email while login
 export const generateVerificationCodeAdmin = catchAsyncErrors(

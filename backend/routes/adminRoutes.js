@@ -1,6 +1,6 @@
 import express from "express";
 import { attachAdmin, isAuthenticatedAdmin } from "../middlewares/auth.js";
-import { forgotPasswordAdmin, generateNewPasswordAdmin, generateVerificationCodeAdmin, getPendingRecruiters, getAdmin, handleRecruiterRequest, loginAdmin, logoutAdmin, registerAdmin, updatePasswordAdmin, updateProfileAdmin, verifyUserAdmin } from "../controllers/adminController.js";
+import { forgotPasswordAdmin, generateNewPasswordAdmin, generateVerificationCodeAdmin, getPendingRecruiters, getAdmin, handleRecruiterRequest, loginAdmin, logoutAdmin, registerAdmin, updatePasswordAdmin, updateProfileAdmin } from "../controllers/adminController.js";
 import { authorizeRoles } from "../middlewares/authorize.js";
 import { authLimiter } from "../middlewares/rateLimit.js";
 import {
@@ -16,7 +16,10 @@ const router = express.Router();
 // created by `npm run seed:accounts`, so gating this breaks no bootstrap path.
 router.post("/register", authLimiter, isAuthenticatedAdmin, authorizeRoles("Admin"), registerAdmin);
 router.post("/login", authLimiter, loginAdmin);
-router.post("/verify", authLimiter, verifyUserAdmin);
+// No POST /verify here on purpose — see the note where verifyUserAdmin was
+// removed in adminController.js. It granted an Admin session on the emailed
+// code alone, and a null code matched the null resting state. Admins verify
+// through /login, which checks the password first.
 router.post("/generate-code", authLimiter, generateVerificationCodeAdmin);
 router.get("/logout", isAuthenticatedAdmin, logoutAdmin);
 // attachAdmin, not isAuthenticatedAdmin: the frontend's silent session check

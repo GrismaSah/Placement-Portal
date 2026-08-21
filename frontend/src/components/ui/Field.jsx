@@ -1,4 +1,5 @@
-import { forwardRef, useId } from "react";
+import { forwardRef, useId, useState } from "react";
+import { FiEye, FiEyeOff } from "react-icons/fi";
 import { cn } from "../../lib/cn";
 
 /**
@@ -95,12 +96,36 @@ export const Input = forwardRef(function Input(
     className,
     wrapperClassName,
     size = "md",
+    type = "text",
     ...rest
   },
   ref
 ) {
   const { fieldId, hintId, errorId, describedBy } = useFieldIds(id, { hint, error });
+  const [revealed, setRevealed] = useState(false);
   const heights = { sm: "h-9 text-sm", md: "h-11", lg: "h-12" };
+
+  /* A password you cannot read is a password you mistype, and on the Recruiter
+     and Admin flows a failed attempt burns the emailed verification code. So
+     every `type="password"` field grows a reveal toggle here rather than at the
+     eight call sites — they pass nothing. State is per-field, which is why
+     "New password" and "Confirm" toggle independently. */
+  const isPassword = type === "password";
+  const trailing = isPassword ? (
+    <button
+      type="button"
+      onClick={() => setRevealed((v) => !v)}
+      disabled={rest.disabled}
+      aria-label={revealed ? "Hide password" : "Show password"}
+      aria-pressed={revealed}
+      aria-controls={fieldId}
+      className="text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {revealed ? <FiEyeOff className="size-4" /> : <FiEye className="size-4" />}
+    </button>
+  ) : (
+    trailingIcon
+  );
 
   return (
     <FieldShell
@@ -126,6 +151,7 @@ export const Input = forwardRef(function Input(
         <input
           ref={ref}
           id={fieldId}
+          type={isPassword && revealed ? "text" : type}
           required={required}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
@@ -135,15 +161,15 @@ export const Input = forwardRef(function Input(
             heights[size],
             "px-3.5",
             leadingIcon && "pl-10",
-            trailingIcon && "pr-10",
+            trailing && "pr-10",
             className
           )}
           {...rest}
         />
 
-        {trailingIcon && (
+        {trailing && (
           <span className="absolute inset-y-0 right-3.5 flex items-center text-[var(--text-tertiary)]">
-            {trailingIcon}
+            {trailing}
           </span>
         )}
       </div>

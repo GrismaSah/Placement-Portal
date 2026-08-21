@@ -8,6 +8,17 @@ import { sentRegisteredEmail } from "../utils/registeredUser/register.js";
 import { sendRecruiterStatusEmailApproved, sendRecruiterStatusEmailDeclined } from "../utils/sendRecruiterStatusEmail.js";
 import { emitProfileUpdate } from "../socket.js";
 import { notify } from "../utils/notify.js";
+import { CODE_SELECT, checkCode, issueCode } from "../utils/verificationCode.js";
+import {
+  assertPasswordPolicy,
+  burnPasswordComparison,
+} from "../utils/passwordPolicy.js";
+
+// Same wording as the User side — see the note in userController.js.
+const INVALID_CREDENTIALS = "Invalid email or password.";
+const INVALID_CODE = "That verification code is not correct or has expired.";
+const CODE_SENT_GENERIC =
+  "If an account exists for that address, we've sent a verification code to it.";
 
 /**
  * Coerce a client-supplied email into a string before it reaches a query.
@@ -42,17 +53,18 @@ export const registerAdmin = catchAsyncErrors(async (req, res, next) => {
   if (isEmail) {
     return next(new ErrorHandler("Email already registered!"));
   }
-  const verificationCode = Math.floor(
-    100000 + Math.random() * 900000
-  ).toString();
-  const admin = await Admin.create({
+  assertPasswordPolicy(password);
+
+  const admin = new Admin({
     firstname,
     lastname,
     email,
     phone,
     password,
-    verificationCode,
   });
+  const verificationCode = issueCode(admin);
+  await admin.save();
+
   const delivery = await sendVerificationCode(email, verificationCode);
 
   res.status(200).json({
@@ -79,16 +91,24 @@ export const loginAdmin = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Please provide email and password."));
   }
 
-  const admin = await Admin.findOne({ email: queryEmail(email) }).select("+password");
+  const admin = await Admin.findOne({ email: queryEmail(email) }).select(
+    `+password ${CODE_SELECT}`
+  );
+
+  // Identical answer and identical cost whether the address is unknown or the
+  // password is wrong — see the note in userController.js. This mattered more
+  // here than anywhere: the differing messages were how an attacker confirmed
+  // an admin address to aim the removed /admin/verify endpoint at.
   if (!admin) {
-    return next(new ErrorHandler("Invalid Email.", 400));
+    await burnPasswordComparison(password);
+    return next(new ErrorHandler(INVALID_CREDENTIALS, 401));
   }
   // Password first, before anything that mints or emails a code: a caller who
   // cannot authenticate must not be able to make us send mail or overwrite the
   // stored code.
   const isPasswordMatched = await admin.comparePassword(password);
   if (!isPasswordMatched) {
-    return next(new ErrorHandler("Invalid Password.", 400));
+    return next(new ErrorHandler(INVALID_CREDENTIALS, 401));
   }
 
   // A correct password with no code submitted is the "send me a code" step,
@@ -98,10 +118,9 @@ export const loginAdmin = catchAsyncErrors(async (req, res, next) => {
   // over that by letting a falsy code through, which was the 2FA bypass.
   // Answering 200 with no `user` is what moves the client to its code screen.
   if (!verificationCode) {
-    const freshCode = Math.floor(100000 + Math.random() * 900000).toString();
-    admin.verificationCode = freshCode;
+    const freshCode = issueCode(admin);
     await admin.save();
-    const delivery = await sendVerificationCode(email, freshCode);
+    const delivery = await sendVerificationCode(admin.email, freshCode);
 
     return res.status(200).json({
       success: true,
@@ -112,16 +131,16 @@ export const loginAdmin = catchAsyncErrors(async (req, res, next) => {
     });
   }
 
-  // Still an explicit comparison rather than a bare inequality, so a falsy or
-  // wrong code can never satisfy it.
-  if (admin.verificationCode !== verificationCode) {
-    return next(new ErrorHandler("Invalid verification code.", 400));
+  // checkCode rejects an absent, expired, exhausted or wrong code, compares in
+  // constant time, and counts the attempt. It cannot be satisfied by a falsy
+  // value, which is the bug that took out the removed /admin/verify route.
+  if (!(await checkCode(admin, verificationCode))) {
+    return next(new ErrorHandler(INVALID_CODE, 400));
   }
   if(admin.isVerified === false) {
     sentRegisteredEmail(admin);
 
   }
-  admin.verificationCode = null;
   admin.isVerified = true;
   await admin.save();
 
@@ -273,44 +292,48 @@ export const updateProfileAdmin = catchAsyncErrors(async (req, res, next) => {
 export const generateVerificationCodeAdmin = catchAsyncErrors(
   async (req, res, next) => {
     const { email } = req.body;
-
-    const verificationCode = Math.floor(
-      100000 + Math.random() * 900000
-    ).toString();
-    const user = await Admin.findOne({ email: queryEmail(email) });
-    if (!user) {
-      return next(new ErrorHandler("User not found.", 404));
+    if (!email) {
+      return next(new ErrorHandler("Email is required.", 400));
     }
-    user.verificationCode = verificationCode;
-    await user.save();
-    const delivery = await sendVerificationCode(email, verificationCode);
+
+    const user = await Admin.findOne({ email: queryEmail(email) }).select(
+      CODE_SELECT
+    );
+
+    // Send only if the account exists; answer the same either way. An admin
+    // address is the most valuable thing this app could confirm.
+    if (user) {
+      const verificationCode = issueCode(user);
+      await user.save();
+      await sendVerificationCode(user.email, verificationCode);
+    }
+
     res.status(200).json({
       success: true,
-      message: delivery.sent
-        ? "Verification code sent to your email. Please check your inbox."
-        : "Could not send the verification email. Please contact the placement office.",
-      emailSent: delivery.sent,
+      message: CODE_SENT_GENERIC,
     });
   }
 );
 
 export const forgotPasswordAdmin = catchAsyncErrors(async (req, res, next) => {
   const { email, verificationCode } = req.body;
-  const user = await Admin.findOne({ email: queryEmail(email) });
-
-  if (!user) {
-    return next(new ErrorHandler("User not found.", 404));
-  }
 
   if (!verificationCode) {
     return next(new ErrorHandler("Verification code is required.", 400));
   }
 
+  const user = await Admin.findOne({ email: queryEmail(email) }).select(
+    CODE_SELECT
+  );
+
+  // `consume: false` — generate-new-password re-checks this same code when the
+  // new password arrives, so this step must not burn it.
+  //
   // A wrong code used to fall off the end of the function without ever
   // responding, so the request hung until the client timed out — and the UI,
   // whose catch block was empty, advanced to the next step anyway.
-  if (user.verificationCode !== verificationCode) {
-    return next(new ErrorHandler("That verification code is not correct.", 400));
+  if (!user || !(await checkCode(user, verificationCode, { consume: false }))) {
+    return next(new ErrorHandler(INVALID_CODE, 400));
   }
 
   res.status(200).json({
@@ -334,24 +357,20 @@ export const generateNewPasswordAdmin = catchAsyncErrors(async (req, res, next) 
     return next(new ErrorHandler("Verification code is required.", 400));
   }
 
-  if (!newPassword || newPassword.length < 8) {
-    return next(
-      new ErrorHandler("Password must contain at least 8 characters.", 400)
-    );
-  }
+  assertPasswordPolicy(newPassword);
 
-  const user = await Admin.findOne({ email: queryEmail(email) });
-  if (!user) {
-    return next(new ErrorHandler("User not found.", 404));
-  }
+  const user = await Admin.findOne({ email: queryEmail(email) }).select(
+    CODE_SELECT
+  );
 
-  if (!user.verificationCode || user.verificationCode !== verificationCode) {
-    return next(new ErrorHandler("That verification code is not correct.", 400));
+  // checkCode burns the code, so it cannot be replayed to reset again.
+  if (!user || !(await checkCode(user, verificationCode))) {
+    return next(new ErrorHandler(INVALID_CODE, 400));
   }
 
   user.password = newPassword;
-  // Burn the code so it cannot be replayed to reset the password again.
-  user.verificationCode = null;
+  // Ends every session that predates the reset — see userController.
+  user.tokenVersion = (user.tokenVersion ?? 0) + 1;
   await user.save();
 
   // sendToken already writes the cookie and sends a JSON body; the second
@@ -361,6 +380,15 @@ export const generateNewPasswordAdmin = catchAsyncErrors(async (req, res, next) 
 
 export const updatePasswordAdmin = catchAsyncErrors(async (req, res, next) => {
   const { oldPassword, newPassword } = req.body;
+
+  if (!oldPassword || !newPassword) {
+    return next(
+      new ErrorHandler("Old password and new password are required.", 400)
+    );
+  }
+
+  assertPasswordPolicy(newPassword);
+
   const user = await Admin.findById(req.user._id).select("+password");
   if (!user) {
     return next(new ErrorHandler("User not found.", 404));
@@ -370,6 +398,8 @@ export const updatePasswordAdmin = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Old password is incorrect.", 400));
   }
   user.password = newPassword;
+  // Signs out every other device — see userController.updatePassword.
+  user.tokenVersion = (user.tokenVersion ?? 0) + 1;
   await user.save();
   sendToken(user, 201, res, "Password updated successfully.");
 });

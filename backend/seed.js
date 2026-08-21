@@ -23,10 +23,44 @@ import { config } from "dotenv";
 
 import { User } from "./models/userSchema.js";
 import { Admin } from "./models/adminModel.js";
+import { hashCode } from "./utils/verificationCode.js";
+import { isProduction } from "./config/env.js";
 
 config({ path: ".env" });
 
+/**
+ * Hard stop on a deployed environment.
+ *
+ * Note what this does and does not cover: it catches running the script *in*
+ * production, not running it locally against a production database. The demo
+ * accounts below have published passwords, so pointing this at a live
+ * MONGO_URI creates real, publicly-known logins on it either way.
+ */
+if (isProduction()) {
+  console.error(
+    "Refusing to seed: NODE_ENV is production. These demo accounts have " +
+      "published passwords and must never exist on a deployed environment."
+  );
+  process.exit(1);
+}
+
 const VERIFICATION_CODE = "123456";
+
+/**
+ * Codes are stored as a keyed hash with an expiry now (see
+ * utils/verificationCode.js), so the seed has to write the hash of the demo
+ * code rather than the six digits — storing "123456" verbatim would simply
+ * never match, and the Recruiter and Admin demo logins would break.
+ *
+ * The far-future expiry is deliberate and is exactly why this file must stay
+ * out of any reachable deployment: a known code that does not expire is a
+ * password-free login for those two accounts.
+ */
+const demoCode = () => ({
+  verificationCode: hashCode(VERIFICATION_CODE),
+  verificationCodeExpires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+  verificationAttempts: 0,
+});
 
 const users = [
   {
@@ -38,7 +72,11 @@ const users = [
     address: "Bangalore, Karnataka",
     phone: 9000000010,
     isVerified: true,
+    // The student demo account needs no code — students sign in with just a
+    // password once verified.
     verificationCode: null,
+    verificationCodeExpires: null,
+    verificationAttempts: 0,
   },
   {
     name: "Test Recruiter",
@@ -49,7 +87,7 @@ const users = [
     address: "Bangalore, Karnataka",
     phone: 9000000020,
     isVerified: true,
-    verificationCode: VERIFICATION_CODE,
+    ...demoCode(),
     status: "Approved",
   },
   {
@@ -61,7 +99,7 @@ const users = [
     address: "Bangalore, Karnataka",
     phone: 9000000021,
     isVerified: true,
-    verificationCode: VERIFICATION_CODE,
+    ...demoCode(),
     status: "Pending",
   },
 ];
@@ -74,7 +112,7 @@ const admins = [
     password: "Admin@123",
     phone: "9000000030",
     isVerified: true,
-    verificationCode: VERIFICATION_CODE,
+    ...demoCode(),
   },
 ];
 

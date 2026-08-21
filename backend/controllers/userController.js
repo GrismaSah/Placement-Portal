@@ -7,6 +7,39 @@ import { sentRegisteredEmail } from "../utils/registeredUser/register.js";
 import { emitProfileUpdate } from "../socket.js";
 import { BRANDING } from "../config/branding.js";
 import { StudentAllowlist } from "../models/studentAllowlistModel.js";
+import { CODE_SELECT, checkCode, issueCode } from "../utils/verificationCode.js";
+import {
+  assertPasswordPolicy,
+  burnPasswordComparison,
+} from "../utils/passwordPolicy.js";
+
+/**
+ * One message for every way a sign-in can fail.
+ *
+ * Login used to answer "Invalid Email." when no account matched, "Invalid
+ * Password." when one did, and a 404 naming the role when the role was wrong —
+ * which together confirm which addresses hold accounts and what each one is.
+ * That is what let an attacker aim the code-minting endpoints at a real
+ * account, and OWASP asks for a consistent message here for exactly that
+ * reason.
+ */
+const INVALID_CREDENTIALS = "Invalid email or password.";
+
+/** Likewise one message whether the address is unknown or the code is wrong. */
+const INVALID_CODE = "That verification code is not correct or has expired.";
+
+/**
+ * Said whether or not the address has an account.
+ *
+ * This costs a little honesty — the old copy distinguished "sent" from "could
+ * not send", which was genuinely useful when SMTP is misconfigured. But this
+ * endpoint is unauthenticated and takes an arbitrary address, so any answer
+ * that varies with whether the account exists is an enumeration oracle. The
+ * paths where the caller has already proved the account is theirs still report
+ * the real delivery result.
+ */
+const CODE_SENT_GENERIC =
+  "If an account exists for that address, we've sent a verification code to it.";
 
 export const register = catchAsyncErrors(async (req, res, next) => {
   const { name, email, phone, password, role, enrollment, address } = req.body;
@@ -73,10 +106,12 @@ export const register = catchAsyncErrors(async (req, res, next) => {
   if (isEmail) {
     return next(new ErrorHandler("Email already registered!"));
   }
-  const verificationCode = Math.floor(
-    100000 + Math.random() * 900000
-  ).toString();
-  const user = await User.create({
+
+  // Checked here as well as by the schema validator, so the rule cannot be
+  // lost to a change in Mongoose middleware ordering. See passwordPolicy.js.
+  assertPasswordPolicy(password);
+
+  const user = new User({
     name,
     email: normalizedEmail,
     phone,
@@ -84,9 +119,12 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     role,
     enrollment,
     address,
-    verificationCode,
   });
-  
+  // Mints the code, stores its keyed hash with a 10-minute expiry, and returns
+  // the six digits to put in the email — the plaintext is never persisted.
+  const verificationCode = issueCode(user);
+  await user.save();
+
   const delivery = await sendVerificationCode(normalizedEmail, verificationCode);
 
   res.status(200).json({
@@ -123,19 +161,20 @@ export const login = catchAsyncErrors(async (req, res, next) => {
   // below needs it.
   const user = await User.findOne({
     email: String(email).trim().toLowerCase(),
-  }).select("+password");
-  if (!user) {
-    return next(new ErrorHandler("Invalid Email.", 400));
+  }).select(`+password ${CODE_SELECT}`);
+
+  // Unknown address and wrong role answer exactly as a wrong password does,
+  // and pay the same bcrypt cost before doing so. Returning early here without
+  // hashing made "no such account" measurably faster than "wrong password",
+  // which enumerates accounts even when the wording is identical.
+  if (!user || user.role !== role) {
+    await burnPasswordComparison(password);
+    return next(new ErrorHandler(INVALID_CREDENTIALS, 401));
   }
-  if (user.role !== role) {
-    return next(
-      new ErrorHandler(`User with provided email and ${role} not found!`, 404)
-    );
-  }
-  
+
   const isPasswordMatched = await user.comparePassword(password);
   if (!isPasswordMatched) {
-    return next(new ErrorHandler("Invalid Password.", 400));
+    return next(new ErrorHandler(INVALID_CREDENTIALS, 401));
   }
 
   if (role === "Recruiter") {
@@ -148,13 +187,14 @@ export const login = catchAsyncErrors(async (req, res, next) => {
     // generated or emailed. Mint and send one here, the same way the
     // Student branch below already does for an unverified student.
     if (!verificationCode) {
-      const freshCode = Math.floor(100000 + Math.random() * 900000).toString();
-      user.verificationCode = freshCode;
+      const freshCode = issueCode(user);
       await user.save();
-      const delivery = await sendVerificationCode(email, freshCode);
+      const delivery = await sendVerificationCode(user.email, freshCode);
 
       return res.status(200).json({
         success: true,
+        // Honest about delivery here: the caller has already proved the
+        // password, so this reveals nothing they did not already know.
         message: delivery.sent
           ? "Verification code sent to your email. Please check your inbox."
           : "Could not send the verification email. Please contact the placement office.",
@@ -162,25 +202,23 @@ export const login = catchAsyncErrors(async (req, res, next) => {
       });
     }
 
-    if (user.verificationCode !== verificationCode) {
-      return next(new ErrorHandler("Invalid verification code.", 400));
+    // Expiry, the attempt cap and the constant-time comparison all live in
+    // checkCode, which also persists the attempt counter on a wrong guess.
+    if (!(await checkCode(user, verificationCode))) {
+      return next(new ErrorHandler(INVALID_CODE, 400));
     }
     if (user.isVerified === false) {
       sentRegisteredEmail(user);
     }
     user.isVerified = true;
-    user.verificationCode = null;
     await user.save();
   }
 
   
   if (role === "Student" && user.isVerified === false) {
-    const verificationCode = Math.floor(
-      100000 + Math.random() * 900000
-    ).toString();
-    user.verificationCode = verificationCode;
+    const verificationCode = issueCode(user);
     await user.save();
-    const delivery = await sendVerificationCode(email, verificationCode);
+    const delivery = await sendVerificationCode(user.email, verificationCode);
 
     return res.status(200).json({
       success: true,
@@ -224,16 +262,18 @@ export const verifyUser = catchAsyncErrors(async (req, res, next) => {
   if (!verificationCode || !email) {
     return next(new ErrorHandler("Please provide verification code."));
   }
-  const user = await User.findOne({ email: String(email).trim().toLowerCase() });
-  if (!user) {
-    return next(new ErrorHandler("User not found.", 404));
-  }
-  if (user.verificationCode !== verificationCode) {
-    return next(new ErrorHandler("Invalid verification code.", 400));
+  const user = await User.findOne({
+    email: String(email).trim().toLowerCase(),
+  }).select(CODE_SELECT);
+
+  // One answer for "no such address" and "wrong code". This endpoint issues a
+  // session, so letting it distinguish the two would make it a free oracle for
+  // which addresses are registered.
+  if (!user || !(await checkCode(user, verificationCode))) {
+    return next(new ErrorHandler(INVALID_CODE, 400));
   }
 
   user.isVerified = true;
-  user.verificationCode = null;
   await user.save();
 
   sentRegisteredEmail(user);
@@ -245,44 +285,51 @@ export const verifyUser = catchAsyncErrors(async (req, res, next) => {
 export const generateVerificationCode = catchAsyncErrors(
   async (req, res, next) => {
     const { email } = req.body;
-
-    const verificationCode = Math.floor(
-      100000 + Math.random() * 900000
-    ).toString();
-    const user = await User.findOne({ email: String(email).trim().toLowerCase() });
-    if (!user) {
-      return next(new ErrorHandler("User not found.", 404));
+    if (!email) {
+      return next(new ErrorHandler("Email is required.", 400));
     }
-    user.verificationCode = verificationCode;
-    await user.save();
-    const delivery = await sendVerificationCode(email, verificationCode);
+
+    const user = await User.findOne({
+      email: String(email).trim().toLowerCase(),
+    }).select(CODE_SELECT);
+
+    // Only actually send when the account exists — but answer identically
+    // either way. This route is unauthenticated and accepts any address, so a
+    // 404 here told an attacker precisely which addresses are registered.
+    if (user) {
+      const verificationCode = issueCode(user);
+      await user.save();
+      await sendVerificationCode(user.email, verificationCode);
+    }
+
     res.status(200).json({
       success: true,
-      message: delivery.sent
-        ? "Verification code sent to your email. Please check your inbox."
-        : "Could not send the verification email. Please contact the placement office.",
-      emailSent: delivery.sent,
+      message: CODE_SENT_GENERIC,
     });
   }
 );
 
 export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
   const { email, verificationCode } = req.body;
-  const user = await User.findOne({ email: String(email).trim().toLowerCase() });
-
-  if (!user) {
-    return next(new ErrorHandler("User not found.", 404));
-  }
 
   if (!verificationCode) {
     return next(new ErrorHandler("Verification code is required.", 400));
   }
 
+  const user = await User.findOne({
+    email: String(email).trim().toLowerCase(),
+  }).select(CODE_SELECT);
+
+  // `consume: false` — this is the middle step of the reset flow and
+  // generate-new-password checks the same code again when the new password is
+  // submitted. Burning it here would break that second check. A wrong guess
+  // still costs an attempt.
+  //
   // A wrong code used to fall off the end of the function without responding,
   // so the request hung until the client gave up — and the UI's empty catch
   // block let the user proceed to set a new password regardless.
-  if (user.verificationCode !== verificationCode) {
-    return next(new ErrorHandler("That verification code is not correct.", 400));
+  if (!user || !(await checkCode(user, verificationCode, { consume: false }))) {
+    return next(new ErrorHandler(INVALID_CODE, 400));
   }
 
   res.status(200).json({
@@ -307,24 +354,23 @@ export const generateNewPassword = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Verification code is required.", 400));
   }
 
-  if (!newPassword || newPassword.length < 8) {
-    return next(
-      new ErrorHandler("Password must contain at least 8 characters.", 400)
-    );
-  }
+  assertPasswordPolicy(newPassword);
 
-  const user = await User.findOne({ email: String(email).trim().toLowerCase() });
-  if (!user) {
-    return next(new ErrorHandler("User not found.", 404));
-  }
+  const user = await User.findOne({
+    email: String(email).trim().toLowerCase(),
+  }).select(CODE_SELECT);
 
-  if (!user.verificationCode || user.verificationCode !== verificationCode) {
-    return next(new ErrorHandler("That verification code is not correct.", 400));
+  // checkCode burns the code on success, so the same one cannot be replayed.
+  if (!user || !(await checkCode(user, verificationCode))) {
+    return next(new ErrorHandler(INVALID_CODE, 400));
   }
 
   user.password = newPassword;
-  // Burn the code so the same one cannot be replayed.
-  user.verificationCode = null;
+  // Whoever reset this password now owns the account, so every session that
+  // predates the reset must stop working — including the attacker's, if the
+  // reset is the victim taking their account back. sendToken below mints a
+  // fresh cookie carrying the new version, so this caller stays signed in.
+  user.tokenVersion = (user.tokenVersion ?? 0) + 1;
   await user.save();
 
   // sendToken sets the cookie and sends the body. The res.json that used to
@@ -382,6 +428,8 @@ export const updatePassword = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Old password and new password are required.", 400));
   }
 
+  assertPasswordPolicy(newPassword);
+
   // +password: the hash is select:false on the schema, and comparePassword
   // below needs it.
   const user = await User.findById(req.user._id).select("+password");
@@ -397,6 +445,10 @@ export const updatePassword = catchAsyncErrors(async (req, res, next) => {
   }
 
   user.password = newPassword;
+  // Signs out every other device. Changing your password is the one action a
+  // user takes when they think someone else has their account, and before
+  // this it did nothing to the sessions that someone else was already using.
+  user.tokenVersion = (user.tokenVersion ?? 0) + 1;
   await user.save();
   sendToken(user, 200, res, "Password updated successfully.");
 });

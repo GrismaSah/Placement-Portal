@@ -60,9 +60,21 @@ app.use(
  * CORS.
  *
  * In production the frontend and API are served from the same Vercel origin
- * (static files at /, this app at /api), so cross-origin requests do not
- * arise and no allow-list is needed. Locally they are on different ports, so
+ * (static files at /, this app at /api), so genuine cross-origin requests do
+ * not arise — a same-origin request sends no `Origin` header and the cors
+ * package lets it straight through. Locally they are on different ports, so
  * the dev origins are permitted explicitly.
+ *
+ * The allow-list applies in production too. It previously read
+ * `origin: production ? true : allowedOrigins`, and `true` means *reflect
+ * whatever Origin the caller sent* — which, paired with `credentials: true`,
+ * is the configuration browsers refuse to grant for a literal `*`: every site
+ * on the internet passes the check and can read credentialed responses.
+ * `sameSite: "lax"` on the auth cookie kept that from being directly
+ * exploitable, since the cookie is withheld from cross-site XHR in the first
+ * place — but relying on the cookie flag to cover a header the app sets wrong
+ * is one mistake away from a breach, and the same-origin argument above is an
+ * argument for a strict list, not a permissive one.
  */
 const allowedOrigins = [
   env("FRONTEND_URL"),
@@ -72,7 +84,7 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: production ? true : allowedOrigins,
+    origin: allowedOrigins,
     // `methods`, not `method` — the misspelling meant this was silently
     // ignored and cors fell back to its defaults, which exclude PATCH. The
     // application status endpoint is a PATCH.

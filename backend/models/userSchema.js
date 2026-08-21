@@ -7,6 +7,12 @@ import validator from "validator";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
+import {
+  BCRYPT_COST,
+  PASSWORD_MAX_BYTES,
+  PASSWORD_MIN_LENGTH,
+  passwordByteLength,
+} from "../utils/passwordPolicy.js";
 
 
 const userSchema = new mongoose.Schema({
@@ -44,8 +50,17 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, "Please provide a Password!"],
-    minLength: [8, "Password must contain at least 8 characters!"],
-    // maxLength: [32, "Password cannot exceed 32 characters!"],
+    minLength: [
+      PASSWORD_MIN_LENGTH,
+      `Password must contain at least ${PASSWORD_MIN_LENGTH} characters!`,
+    ],
+    // bcrypt truncates at 72 *bytes* and ignores the rest, so anything longer
+    // is silently weaker than the user believes. Measured in bytes rather than
+    // characters because a non-ASCII character costs more than one.
+    validate: {
+      validator: (v) => passwordByteLength(v) <= PASSWORD_MAX_BYTES,
+      message: `Password cannot exceed ${PASSWORD_MAX_BYTES} bytes.`,
+    },
     // Never loaded unless a query explicitly asks for it with
     // .select("+password"). Scrubbing on the way out is opt-in and one missed
     // path leaks the hash; this makes leaking it require a deliberate act.
@@ -60,9 +75,39 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+
+  /**
+   * Sign-in / reset code state. See utils/verificationCode.js for why all
+   * three exist and why the code is stored as a keyed hash rather than the six
+   * digits the user is emailed. `select: false` for the same reason as
+   * `password` — use CODE_SELECT to opt in where a check genuinely needs them.
+   */
   verificationCode: {
     type: String,
     default: null,
+    select: false,
+  },
+  verificationCodeExpires: {
+    type: Date,
+    default: null,
+    select: false,
+  },
+  verificationAttempts: {
+    type: Number,
+    default: 0,
+    select: false,
+  },
+
+  /**
+   * Bumped whenever the password changes. Every JWT carries the value that was
+   * current when it was minted, and the auth guards reject a token whose value
+   * no longer matches — which is what makes "change my password" actually end
+   * sessions on other devices. Without it a stolen 7-day token survived the
+   * one action a victim takes to recover.
+   */
+  tokenVersion: {
+    type: Number,
+    default: 0,
   },
   status: {
     type: String,
@@ -136,7 +181,7 @@ userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     return next();
   }
-  this.password = await bcrypt.hash(this.password, 10);
+  this.password = await bcrypt.hash(this.password, BCRYPT_COST);
   next();
 });
 
@@ -146,9 +191,13 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
 
 userSchema.methods.getJWTToken = function () {
   // Trimmed: a trailing newline on JWT_EXPIRE makes jsonwebtoken throw.
-  return jwt.sign({ id: this._id }, env("JWT_SECRET_KEY"), {
-    expiresIn: env("JWT_EXPIRE", "7d"),
-  });
+  // `tv` is the token version — see the field's note above. Kept short because
+  // it rides in every request's cookie.
+  return jwt.sign(
+    { id: this._id, tv: this.tokenVersion ?? 0 },
+    env("JWT_SECRET_KEY"),
+    { expiresIn: env("JWT_EXPIRE", "7d") }
+  );
 };
 
 

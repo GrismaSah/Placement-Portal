@@ -13,6 +13,11 @@ export const publicUser = (user) => {
   const plain = typeof user?.toObject === "function" ? user.toObject() : { ...user };
   delete plain.password;
   delete plain.verificationCode;
+  delete plain.verificationCodeExpires;
+  delete plain.verificationAttempts;
+  // Not secret, but it is internal session bookkeeping the client has no use
+  // for, and publishing it advertises exactly which value to forge.
+  delete plain.tokenVersion;
   delete plain.__v;
   return plain;
 };

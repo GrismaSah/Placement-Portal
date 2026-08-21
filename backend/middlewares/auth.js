@@ -16,6 +16,22 @@ const decodeToken = (req) => {
   }
 };
 
+/**
+ * A signature-valid token is not automatically a live session.
+ *
+ * The account bumps `tokenVersion` whenever its password changes, so a token
+ * minted before that no longer matches and is refused here — which is what
+ * turns "change my password" into "sign my other devices out". Without this a
+ * stolen cookie stayed good for its full seven days no matter what the victim
+ * did about it.
+ *
+ * `?? 0` on the token side is deliberate: tokens issued before this field
+ * existed carry no `tv` at all, and treating those as version 0 lets sessions
+ * that were live at deploy time survive rather than logging everyone out.
+ */
+const sessionIsCurrent = (decoded, account) =>
+  (decoded?.tv ?? 0) === (account?.tokenVersion ?? 0);
+
 export const isAuthenticated = catchAsyncErrors(async (req, res, next) => {
   const decoded = decodeToken(req);
   if (!decoded?.id) {
@@ -28,7 +44,7 @@ export const isAuthenticated = catchAsyncErrors(async (req, res, next) => {
   // or belong to an Admin (who lives in a different collection). Previously
   // req.user was simply set to null and every downstream controller crashed
   // on `req.user.role` with a 500.
-  if (!user) {
+  if (!user || !sessionIsCurrent(decoded, user)) {
     return next(new ErrorHandler("User Not Authorized", 401));
   }
 
@@ -43,7 +59,7 @@ export const isAuthenticatedAdmin = catchAsyncErrors(async (req, res, next) => {
   }
 
   const admin = await Admin.findById(decoded.id).select("-password -verificationCode");
-  if (!admin) {
+  if (!admin || !sessionIsCurrent(decoded, admin)) {
     return next(new ErrorHandler("User Not Authorized", 401));
   }
 
@@ -67,18 +83,22 @@ export const isAuthenticatedAdmin = catchAsyncErrors(async (req, res, next) => {
  */
 export const attachUser = catchAsyncErrors(async (req, res, next) => {
   const decoded = decodeToken(req);
-  req.user = decoded?.id
+  const user = decoded?.id
     ? await User.findById(decoded.id).select("-password -verificationCode")
     : null;
+  // A superseded token is "no session" here rather than an error, same as an
+  // absent one — this route only answers "am I logged in?".
+  req.user = user && sessionIsCurrent(decoded, user) ? user : null;
   next();
 });
 
 /** Non-throwing counterpart to isAuthenticatedAdmin — see attachUser. */
 export const attachAdmin = catchAsyncErrors(async (req, res, next) => {
   const decoded = decodeToken(req);
-  const admin = decoded?.id
+  const found = decoded?.id
     ? await Admin.findById(decoded.id).select("-password -verificationCode")
     : null;
+  const admin = found && sessionIsCurrent(decoded, found) ? found : null;
   if (admin) admin.role = "Admin";
   req.user = admin;
   next();
@@ -98,13 +118,13 @@ export const isAuthenticatedAny = catchAsyncErrors(async (req, res, next) => {
   }
 
   const user = await User.findById(decoded.id).select("-password -verificationCode");
-  if (user) {
+  if (user && sessionIsCurrent(decoded, user)) {
     req.user = user;
     return next();
   }
 
   const admin = await Admin.findById(decoded.id).select("-password -verificationCode");
-  if (admin) {
+  if (admin && sessionIsCurrent(decoded, admin)) {
     admin.role = "Admin";
     req.user = admin;
     return next();

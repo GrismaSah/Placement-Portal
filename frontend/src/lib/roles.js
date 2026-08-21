@@ -12,7 +12,6 @@
 import {
   FiBarChart2,
   FiBriefcase,
-  FiCheckSquare,
   FiFileText,
   FiGrid,
   FiPlus,
@@ -43,6 +42,9 @@ export const roleLabelLong = (role) =>
     Admin: "Placement Officer (Admin)",
   })[role] ?? role ?? "";
 
+// Kept as a complete set even though only two currently have callers — an
+// asymmetric role API is the kind of thing that gets the missing one
+// re-added inline somewhere else.
 export const isStudent = (user) => user?.role === ROLES.STUDENT;
 export const isRecruiter = (user) => user?.role === ROLES.RECRUITER;
 export const isOfficer = (user) => user?.role === ROLES.OFFICER;
@@ -95,8 +97,6 @@ export const navFor = (role) => {
 /** Up to four items for the mobile bottom bar — more than that is unusable. */
 export const mobileNavFor = (role) => navFor(role).slice(0, 4);
 
-export const homeFor = () => "/app/dashboard";
-
 /**
  * Where a signed-out user of this role goes to sign back in.
  *
@@ -113,9 +113,3 @@ export const loginPathFor = (role) =>
     [ROLES.RECRUITER]: "/recruiter/login",
     [ROLES.OFFICER]: "/placement-office/login",
   })[role] ?? "/login";
-
-export const ROLE_ICONS = {
-  Student: FiUser,
-  Recruiter: FiBriefcase,
-  Admin: FiCheckSquare,
-};

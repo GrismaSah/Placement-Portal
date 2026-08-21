@@ -26,3 +26,8 @@ backend/seed.js
 backend/seedJobs.js
 backend/seedStudentAllowlist.js
 backend/seedDemoApplication.js
+
+# One-off migration, already applied. Kept in the repo as the record of the
+# TNP/TPO -> Recruiter/Admin rename, but it rewrites collections and roles, so
+# it has no business being reachable in a deployment bundle.
+backend/migrateRoleNames.js

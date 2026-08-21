@@ -107,18 +107,8 @@ export function codeBlock(code) {
   </div>`;
 }
 
-/** Label/value rows, used by the job-posted and status emails. */
-export function detailRows(rows) {
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${c.hairline};border-radius:12px;">
-    ${rows
-      .map(
-        ([label, value], i) => `<tr>
-      <td style="padding:12px 16px;font-size:13px;color:${c.muted};${i ? `border-top:1px solid ${c.hairline};` : ""}">${label}</td>
-      <td style="padding:12px 16px;font-size:14px;font-weight:600;color:${c.ink};text-align:right;${i ? `border-top:1px solid ${c.hairline};` : ""}">${value}</td>
-    </tr>`
-      )
-      .join("")}
-  </table>`;
-}
-
-export default BRANDING;
+// `detailRows()` used to live here, building label/value tables for a
+// "new job posted" email. That email was never wired up — the only importer
+// was utils/NewJobPostedNotificationTemplate.js, which nothing imported
+// either. New jobs notify in-app via notifyMany() instead. Both were removed
+// rather than left as a second, silently-unreachable notification path.

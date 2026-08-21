@@ -104,26 +104,10 @@ const JainLogo = ({
   );
 };
 
-/**
- * Logo + product name, as used in the app header, auth panel and footer.
- * The divider keeps "Placement Portal" clearly subordinate to the institution.
- */
-export const JainLockup = ({ tone = "auto", className = "", showProduct = true }) => (
-  <span className={`inline-flex items-center gap-3 ${className}`}>
-    <JainLogo variant="full" tone={tone} height={38} />
-    {showProduct && (
-      <>
-        <span
-          aria-hidden="true"
-          className="h-8 w-px"
-          style={{ backgroundColor: "currentColor", opacity: 0.22 }}
-        />
-        <span className="text-sm leading-tight font-semibold tracking-tight">
-          {BRAND.product}
-        </span>
-      </>
-    )}
-  </span>
-);
+// A `JainLockup` wrapper (logo + divider + product name) used to be exported
+// here, documented as "used in the app header, auth panel and footer". It was
+// imported by none of them — each composes <JainLogo> with its own spacing
+// instead. A component whose docstring claims call sites it does not have is
+// worse than no component, so it was removed rather than left to mislead.
 
 export default JainLogo;

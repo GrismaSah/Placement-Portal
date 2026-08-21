@@ -46,10 +46,8 @@ export const avatarColors = (user) => {
   };
 };
 
-/** Human label for a role. */
-export const roleLabel = (role) => {
-  if (role === "Recruiter") return "Recruiter";
-  if (role === "Admin") return "Placement Officer";
-  if (role === "Student") return "Student";
-  return role || "";
-};
+// A second `roleLabel` used to live here — same Student/Recruiter/Admin
+// mapping as lib/roles.js, written as an if/else chain, with no importers.
+// Two copies of the role vocabulary in two modules is a trap: renaming a role
+// would have been applied to whichever one the author found first. The live
+// one is `roleLabel` in lib/roles.js; this file is about avatars only.

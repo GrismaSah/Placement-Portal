@@ -34,9 +34,12 @@ Two independent apps in one repository. In local dev they run side by side; in p
 placement-portal/
 ├── backend/              # Express API — see backend/README.md
 ├── frontend/             # React + Vite client
+├── api/
+│   └── index.js          # Vercel serverless entry — re-exports backend/app.js
 ├── docs/
 │   └── architecture.png  # the diagram above
 ├── .env.example          # env var template — copy into backend/.env
+├── vercel.json           # build, rewrites, security headers
 └── package.json          # workspace-root convenience scripts only
 ```
 
@@ -46,6 +49,7 @@ placement-portal/
 backend/
 ├── server.js                # local dev entrypoint (Express + Socket.IO)
 ├── app.js                   # Express app, middleware, route mounting
+├── socket.js                # Socket.IO server — local dev only (see below)
 ├── routes/                  # one file per resource (user, admin, job, application, resume, notification)
 ├── controllers/             # request handlers — all business logic lives here
 ├── models/                  # Mongoose schemas
@@ -56,8 +60,12 @@ backend/
 ├── data/                    # seed data (student enrollment allowlist CSV)
 ├── seed.js                  # demo account seeding (idempotent)
 ├── seedJobs.js              # demo job listings
-└── seedStudentAllowlist.js  # demo enrollment-number roster
+├── seedStudentAllowlist.js  # demo enrollment-number roster
+├── seedDemoApplication.js   # one demo application, so screens aren't empty
+└── migrateRoleNames.js      # one-off, already applied: TNP/TPO -> Recruiter/Admin
 ```
+
+Socket.IO runs only under `server.js`. Production is a Vercel serverless function, which cannot hold a connection open, so live updates degrade to "refresh on next fetch" there.
 
 ### Frontend module layout
 
@@ -81,12 +89,12 @@ Requires Node 18+ and a MongoDB Atlas connection string.
 
 ```bash
 git clone https://github.com/GrismaSah/Placement-Portal.git
-cd placement-portal
+cd Placement-Portal
 npm --prefix backend install
 npm --prefix frontend install
 
 cp .env.example backend/.env   # then fill in real values
-npm run seed                    # creates demo Student/Recruiter/Admin accounts + jobs
+npm run seed                    # demo accounts + jobs + enrollment allowlist + one application
 npm run dev                     # starts the backend on :4000
 npm run dev:frontend            # in a second terminal, starts the frontend on :5173
 ```
@@ -97,7 +105,7 @@ Recruiter and Admin logins require a fresh verification code every sign-in — e
 
 ## API surface
 
-All routes are mounted under `/api/v1/`:
+Every resource route is mounted under `/api/v1/`. The one exception is `GET /api/health`, an unauthenticated uptime probe returning `{ success: true, status: "ok" }`.
 
 | Prefix | Handles |
 |---|---|

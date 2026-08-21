@@ -2,8 +2,8 @@ import transporter from "../email.config.js";
 import { Verification_Email_Template } from "./verificationEmailTemplate.js";
 import { BRANDING } from "../../config/branding.js";
 
-/** True only when SMTP credentials are actually present. */
-export const emailConfigured = () =>
+/** True only when SMTP credentials are actually present. Module-local. */
+const emailConfigured = () =>
   Boolean(process.env.NODEMAIL_EMAIL && process.env.NODEMAIL_PASSWORD);
 
 /**

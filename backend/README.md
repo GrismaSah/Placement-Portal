@@ -18,10 +18,13 @@ Environment variables are documented in the root [`.env.example`](../.env.exampl
 |---|---|
 | `npm run dev` | Start with nodemon (auto-restart) |
 | `npm start` | Start plain (production) |
-| `npm run seed` | Seed demo accounts + jobs + enrollment allowlist |
+| `npm run seed` | Runs all four seeders below, in order |
 | `npm run seed:accounts` | Just the demo Student/Recruiter/Admin accounts |
 | `npm run seed:jobs` | Just the demo job listings |
 | `npm run seed:allowlist` | Just the enrollment-number roster |
+| `npm run seed:demo` | Just one demo application, so the review screens aren't empty |
+
+Demo logins created by `seed:accounts`: `student@jain.test`, `recruiter@jain.test`, `recruiter.pending@jain.test` (awaiting approval) and `admin@jain.test`. It also deletes the pre-rename `tnp@` / `tpo@` accounts if they are still present, so the demo database ends up with one set, not two.
 
 Recruiter and Admin sign-in is self-service: submitting the correct password with no verification code mints and sends a fresh one, so a login never gets permanently stuck. **With no SMTP configured the code is printed to the server console** — read it from the terminal rather than re-seeding.
 
@@ -29,7 +32,7 @@ The seeder sets a fixed code of `123456` on the demo Recruiter and Admin. That i
 
 ## Routes
 
-All mounted under `/api/v1/`:
+Every resource router below is mounted under `/api/v1/`. The one route outside it is `GET /api/health`, an unauthenticated uptime probe ([app.js](app.js)).
 
 | Prefix | Handles |
 |---|---|

@@ -23,10 +23,6 @@ export function invalidate(fragment) {
   }
 }
 
-export function primeCache(key, data) {
-  cache.set(key, { data, at: Date.now() });
-}
-
 export function useQuery(url, { params, enabled = true, staleMs = 30_000 } = {}) {
   const key = url ? `${url}?${new URLSearchParams(params ?? {}).toString()}` : null;
 

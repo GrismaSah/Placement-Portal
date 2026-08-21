@@ -19,7 +19,7 @@ import { User } from "./models/userSchema.js";
 
 config({ path: ".env" });
 
-const OWNER_EMAIL = "tnp@jain.test";
+const OWNER_EMAIL = "recruiter@jain.test";
 
 const COMPANIES = {
   Google: { city: "Bengaluru", country: "India" },

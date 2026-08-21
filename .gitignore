@@ -98,5 +98,14 @@ ehthumbs.db
 desktop.ini
 $RECYCLE.BIN/
 
+# ---------------------------------------------------------------------------
+# Vercel CLI project link.
+#
+# The CLI appended `.vercel` and `.env*` here itself. The `.env*` line was a
+# silent bug: gitignore resolves last-match-wins, so it overrode the
+# `!.env.example` negation above and made the template ignored by rule.
+# `.env.example` only survived because it was already tracked — deleting and
+# re-adding it would have failed with no obvious cause. Secrets are already
+# covered by the `.env` / `.env.*` block above, so the duplicate line is gone.
+# ---------------------------------------------------------------------------
 .vercel
-.env*

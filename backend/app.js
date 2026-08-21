@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import { config } from "dotenv";
 import cookieParser from "cookie-parser";
 import fileUpload from "express-fileupload";
@@ -26,6 +27,34 @@ const production = isProduction();
 // start up requests with a validation error — the rate limiter below would
 // break login in production, not just fail to target the right IP.
 app.set("trust proxy", 1);
+
+/**
+ * Security headers.
+ *
+ * vercel.json already sets nosniff / SAMEORIGIN / Referrer-Policy, but only at
+ * Vercel's edge — which means locally there were no security headers at all,
+ * and anything not served through that edge got none either. Helmet makes the
+ * API itself responsible for its own headers.
+ *
+ * Two defaults are deliberately overridden:
+ *
+ *  - `contentSecurityPolicy: false` — Express serves no HTML here. The SPA is
+ *    static files from Vercel in production and from Vite in development, so a
+ *    CSP on JSON responses would be policy nothing enforces. It belongs on the
+ *    static host, not here.
+ *
+ *  - `crossOriginResourcePolicy: "cross-origin"` — helmet defaults to
+ *    "same-origin", but in development the frontend is :5173 and this API is
+ *    :4000. Resumes are fetched from /api/v1/resume/file/:id as a blob and
+ *    rendered in an <object>, so the restrictive default risks breaking resume
+ *    preview locally while protecting nothing (production is same-origin).
+ */
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 
 /**
  * CORS.

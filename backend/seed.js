@@ -42,7 +42,7 @@ const users = [
   },
   {
     name: "Test Recruiter",
-    email: "tnp@jain.test",
+    email: "recruiter@jain.test",
     password: "Recruiter@123",
     role: "Recruiter",
     enrollment: "",
@@ -54,7 +54,7 @@ const users = [
   },
   {
     name: "Pending Recruiter",
-    email: "tnp.pending@jain.test",
+    email: "recruiter.pending@jain.test",
     password: "Recruiter@123",
     role: "Recruiter",
     enrollment: "",
@@ -70,7 +70,7 @@ const admins = [
   {
     firstname: "Test",
     lastname: "Admin",
-    email: "tpo@jain.test",
+    email: "admin@jain.test",
     password: "Admin@123",
     phone: "9000000030",
     isVerified: true,
@@ -91,9 +91,31 @@ const upsert = async (Model, { email, ...fields }) => {
   return { action, doc };
 };
 
+/**
+ * Demo accounts seeded before the TNP/TPO -> Recruiter/Admin rename.
+ *
+ * `upsert` matches on email, so renaming the seeds above would otherwise leave
+ * the old documents behind and the demo database would end up with two
+ * recruiters and two admins — one set unreachable by any documented login.
+ */
+const LEGACY_EMAILS = [
+  "tnp@jain.test",
+  "tnp.pending@jain.test",
+  "tpo@jain.test",
+];
+
 const run = async () => {
   await mongoose.connect(process.env.MONGO_URI, { dbName: "JAIN_PLACEMENT" });
   console.log(`Connected to ${mongoose.connection.db.databaseName}\n`);
+
+  for (const Model of [User, Admin]) {
+    const { deletedCount } = await Model.deleteMany({
+      email: { $in: LEGACY_EMAILS },
+    });
+    if (deletedCount) {
+      console.log(`  removed  ${deletedCount} legacy demo account(s) from ${Model.modelName}`);
+    }
+  }
 
   for (const u of users) {
     const { action, doc } = await upsert(User, u);

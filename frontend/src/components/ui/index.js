@@ -1,10 +1,19 @@
 /**
  * Barrel for the primitive layer.
  *
- *   import { Button, Card, Input, StatusBadge } from "@/components/ui";
+ *   import { Button, Card, Input, StatusBadge } from "../ui";
  *
  * Screens should import from here, never from the individual files, so the
  * internal file layout stays free to change.
+ *
+ * (This example used to read "@/components/ui". There was an '@' -> './src'
+ * alias in vite.config.js, but nothing in the codebase ever imported through
+ * it — every import is relative — so the alias was removed and this example
+ * now shows what the code actually does.)
+ *
+ * Every primitive's full surface is re-exported here on purpose, including
+ * pieces no screen happens to use yet: a partial barrel is what pushes people
+ * back to deep imports.
  */
 
 export { default as Button } from "./Button";

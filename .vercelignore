@@ -27,6 +27,11 @@ backend/seedJobs.js
 backend/seedStudentAllowlist.js
 backend/seedDemoApplication.js
 
+# One-off admin creation, run manually with real credentials passed as env
+# vars — never a published password, but still has no business being
+# reachable in a deployment bundle.
+backend/createAdmin.js
+
 # One-off migration, already applied. Kept in the repo as the record of the
 # TNP/TPO -> Recruiter/Admin rename, but it rewrites collections and roles, so
 # it has no business being reachable in a deployment bundle.

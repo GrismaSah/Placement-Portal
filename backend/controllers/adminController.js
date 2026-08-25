@@ -85,61 +85,33 @@ export const registerAdmin = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const loginAdmin = catchAsyncErrors(async (req, res, next) => {
-  const { email, password, verificationCode } = req.body;
+  const { email, password } = req.body;
 
   if (!email || !password) {
     return next(new ErrorHandler("Please provide email and password."));
   }
 
   const admin = await Admin.findOne({ email: queryEmail(email) }).select(
-    `+password ${CODE_SELECT}`
+    "+password"
   );
 
   // Identical answer and identical cost whether the address is unknown or the
-  // password is wrong — see the note in userController.js. This mattered more
-  // here than anywhere: the differing messages were how an attacker confirmed
-  // an admin address to aim the removed /admin/verify endpoint at.
+  // password is wrong — see the note in userController.js.
   if (!admin) {
     await burnPasswordComparison(password);
     return next(new ErrorHandler(INVALID_CREDENTIALS, 401));
   }
-  // Password first, before anything that mints or emails a code: a caller who
-  // cannot authenticate must not be able to make us send mail or overwrite the
-  // stored code.
   const isPasswordMatched = await admin.comparePassword(password);
   if (!isPasswordMatched) {
     return next(new ErrorHandler(INVALID_CREDENTIALS, 401));
   }
 
-  // A correct password with no code submitted is the "send me a code" step,
-  // mirroring the Recruiter branch in userController. Signing in nulls the
-  // stored code, so without this an admin could sign in only once per
-  // `npm run seed:accounts` — the previous inequality check happened to paper
-  // over that by letting a falsy code through, which was the 2FA bypass.
-  // Answering 200 with no `user` is what moves the client to its code screen.
-  if (!verificationCode) {
-    const freshCode = issueCode(admin);
-    await admin.save();
-    const delivery = await sendVerificationCode(admin.email, freshCode);
-
-    return res.status(200).json({
-      success: true,
-      message: delivery.sent
-        ? "Verification code sent to your email. Please check your inbox."
-        : "Could not send the verification email — the code is in the server log.",
-      emailSent: delivery.sent,
-    });
-  }
-
-  // checkCode rejects an absent, expired, exhausted or wrong code, compares in
-  // constant time, and counts the attempt. It cannot be satisfied by a falsy
-  // value, which is the bug that took out the removed /admin/verify route.
-  if (!(await checkCode(admin, verificationCode))) {
-    return next(new ErrorHandler(INVALID_CODE, 400));
-  }
-  if(admin.isVerified === false) {
+  // No emailed code here: this is a single-admin portfolio project, so a
+  // correct password is the whole check. Trading away the second factor for
+  // a one-step sign-in is a reasonable call for a known, single operator —
+  // it would not be for a placement office with real staff turnover.
+  if (admin.isVerified === false) {
     sentRegisteredEmail(admin);
-
   }
   admin.isVerified = true;
   await admin.save();

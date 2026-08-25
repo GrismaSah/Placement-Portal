@@ -81,15 +81,17 @@ const Login = ({ allowedRoles = ["Student"] }) => {
 
     try {
       const payload = isAdmin
-        ? { email, password, verificationCode: code }
+        ? { email, password }
         : { email, password, role };
 
       const { data } = await api.post(`${base}/login`, payload);
 
-      // Recruiters and officers must supply a fresh code every sign-in, and an
-      // unverified student is sent one automatically. In both cases the server
-      // answers 200 without setting a cookie, so the presence of a user object
-      // — not the status code — is what tells us we are actually signed in.
+      // Admin signs in on the first request — there's no code step for that
+      // role (see the comment on loginAdmin). Recruiters must supply a fresh
+      // code every sign-in, and an unverified student is sent one
+      // automatically; in both of those cases the server answers 200 without
+      // setting a cookie, so the presence of a user object — not the status
+      // code — is what tells us we are actually signed in.
       if (data.user) {
         toast.success(data.message || "Signed in");
         finish(data.user);
@@ -125,11 +127,9 @@ const Login = ({ allowedRoles = ["Student"] }) => {
       // answers through sendToken() just as /login does.
       let signedInUser;
 
-      if (isAdmin || role === "Recruiter") {
-        // These roles verify as part of logging in, not through /verify.
-        const payload = isAdmin
-          ? { email, password, verificationCode: code }
-          : { email, password, role, verificationCode: code };
+      if (role === "Recruiter") {
+        // Recruiters verify as part of logging in, not through /verify.
+        const payload = { email, password, role, verificationCode: code };
         const { data } = await api.post(`${base}/login`, payload);
         if (!data.user) throw new Error("That code was not accepted.");
         signedInUser = data.user;
@@ -313,25 +313,6 @@ const Login = ({ allowedRoles = ["Student"] }) => {
           </div>
         </div>
 
-        {isAdmin && (
-          <div>
-            <span className="mb-1.5 block text-sm font-medium text-[var(--text-primary)]">
-              Verification code
-            </span>
-            <OtpInput value={code} onChange={setCode} autoFocus={false} />
-            <p className="mt-1.5 text-xs text-[var(--text-tertiary)]">
-              Placement Officer accounts require a code at every sign-in.{" "}
-              <button
-                type="button"
-                onClick={resend}
-                disabled={cooldown > 0 || !email}
-                className="font-medium text-[var(--brand)] hover:underline disabled:opacity-50"
-              >
-                {cooldown > 0 ? `Resend in ${cooldown}s` : "Send me one"}
-              </button>
-            </p>
-          </div>
-        )}
 
         <Button type="submit" fullWidth size="lg" loading={loading}>
           Sign in
